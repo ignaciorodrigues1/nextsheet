@@ -1,6 +1,6 @@
 {
   "name": "create-nextsheet-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Create a NextSheet workbook app in seconds.",
   "license": "MIT",
   "type": "module",
@@ -8,7 +8,8 @@
     "create-nextsheet-app": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",
