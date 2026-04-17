@@ -12,16 +12,18 @@
 
   <p>
     <a href="#the-thesis">Thesis</a> ·
+    <a href="#getting-started">Getting Started</a> ·
     <a href="#how-it-works">How it works</a> ·
-    <a href="#documentation">Documentation</a> ·
-    <a href="#the-platform">Platform</a> ·
+    <a href="#supersheet-hosting">SuperSheet</a> ·
+    <a href="#roadmap">Roadmap</a> ·
     <a href="#community">Community</a>
   </p>
 
   <p>
     <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-000000.svg?style=flat-square" />
-    <img alt="Status" src="https://img.shields.io/badge/status-RFC-000000.svg?style=flat-square" />
+    <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-000000.svg?style=flat-square" />
     <img alt="TypeScript" src="https://img.shields.io/badge/typescript-strict-000000.svg?style=flat-square" />
+    <img alt="pnpm" src="https://img.shields.io/badge/pnpm-workspace-000000.svg?style=flat-square" />
   </p>
 </div>
 
@@ -37,21 +39,94 @@ NextSheet is the bet that this ends now.
 
 We are building the open source framework for authoring spreadsheets the way modern software is built: as components, with end-to-end types, composed from primitives, versioned in Git, deployed to any backend, and authored by humans and agents alike. One codebase, any surface — Google Sheets, Excel, `.xlsx`, CSV, and whatever comes next.
 
-The spreadsheet deserves a runtime worthy of its scale. We are building it in the open.
+---
 
-## What you get
+## Getting Started
 
-- **A component model.** Sheets, Sections, Rows, Cells, and Columns compose like React elements. Reusable, typed, testable.
-- **End-to-end types.** Columns, formulas, ranges, and cross-sheet references are fully typed. The compiler catches broken references before your CFO does.
-- **Backend-agnostic core.** One codebase compiles to Google Sheets, Excel Online, `.xlsx`, or CSV through a pluggable adapter layer.
-- **Git-native workflows.** Sheets are source. They diff, merge, and ship through pull requests.
-- **Hot reload.** A dev server that previews your workbook as you type.
-- **Agent-ready by design.** Typed schemas and declarative components are the ideal surface for LLMs to author, edit, and verify spreadsheets correctly.
-- **Progressive disclosure.** A one-file sheet stays one file. A thousand-sheet finance system stays coherent.
+### Prerequisites
+
+- Node.js 18+
+- pnpm 9+ (for working in this monorepo)
+
+### Install
+
+```bash
+# In your own project
+npm install nextsheet
+# or
+pnpm add nextsheet
+```
+
+### Configure TypeScript
+
+Add this to your `tsconfig.json` so TypeScript understands the NextSheet JSX syntax:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "nextsheet"
+  }
+}
+```
+
+### Write your first sheet
+
+Create a file with the `.sheet.tsx` extension anywhere in your project:
+
+```tsx
+// sheets/Invoices.sheet.tsx
+import { defineSheet, Sheet, Column, Formula } from 'nextsheet'
+
+export default defineSheet('Invoices 2026', () => (
+  <Sheet>
+    <Column name="id"     type="number"   primary />
+    <Column name="client" type="string"   required />
+    <Column name="amount" type="currency" currency="USD" />
+    <Column name="paid"   type="boolean"  default={false} />
+    <Column name="total"  type="currency"
+      formula={({ amount }) => <Formula>{amount} * 1.21</Formula>}
+    />
+  </Sheet>
+))
+```
+
+### Build
+
+```bash
+# Output CSV
+npx nextsheet build sheets/Invoices.sheet.tsx --target csv --out dist/invoices.csv
+
+# Output Excel
+npx nextsheet build sheets/Invoices.sheet.tsx --target xlsx --out dist/invoices.xlsx
+
+# Output for SuperSheet hosting
+npx nextsheet build sheets/Invoices.sheet.tsx --target supersheet
+```
+
+### Watch mode
+
+```bash
+npx nextsheet dev sheets/Invoices.sheet.tsx
+```
+
+Rebuilds on every save. Output lands in `dist/` by default.
+
+### Build multiple sheets into one workbook
+
+```tsx
+// In a build script or Next.js API route
+import { workbook, csvAdapter } from 'nextsheet'
+import Invoices from './sheets/Invoices.sheet.js'
+import Expenses from './sheets/Expenses.sheet.js'
+
+const wb = workbook('Finance 2026', [Invoices, Expenses])
+const { data } = await csvAdapter.render(wb)
+```
+
+---
 
 ## How it works
-
-> The examples below describe the target API. NextSheet is in the RFC phase and the community is actively shaping it. Join the [Discussions](#community) to contribute.
 
 ### A sheet is a component
 
@@ -75,9 +150,20 @@ export default defineSheet('Invoices 2026', () => (
 ### Reports compose the same way React apps do
 
 ```tsx
-import { Sheet, Section, Row, Cell, Header } from 'nextsheet'
+// sheets/QuarterlyReport.sheet.tsx
+import { Sheet, Section, Row, Cell, Header, useFormula, useQuery } from 'nextsheet'
 
-export default function QuarterlyReport({ regions }: Props) {
+interface Region { id: string; name: string; revenue: number; growth: number }
+
+const regions: Region[] = [
+  { id: 'north', name: 'North', revenue: 520_000, growth: 0.12 },
+  { id: 'south', name: 'South', revenue: 310_000, growth: 0.08 },
+]
+
+export default function QuarterlyReport() {
+  const total  = useFormula(() => regions.reduce((s, r) => s + r.revenue, 0))
+  const topReg = useQuery(regions).orderBy('revenue', 'desc').first()
+
   return (
     <Sheet name="Q1 Report" theme="minimal">
       <Header title="Quarterly Revenue" subtitle="January — March 2026" />
@@ -98,43 +184,342 @@ export default function QuarterlyReport({ regions }: Props) {
           </Row>
         ))}
       </Section>
+
+      <Section title="Summary">
+        <Row><Cell bold>Total revenue</Cell><Cell format="currency">{total}</Cell></Row>
+        <Row><Cell bold>Top region</Cell><Cell>{topReg?.name}</Cell></Row>
+      </Section>
     </Sheet>
   )
 }
 ```
 
-### Live data, typed ranges, declarative formulas
+### Hooks
 
 ```tsx
-import { useRange, useFormula, useQuery } from 'nextsheet'
+import { useFormula, useQuery, useRange } from 'nextsheet'
 
-function SalesSummary() {
-  const sales  = useRange<Sale>('Sales!A2:D')
-  const total  = useFormula(() => sum(sales.map((s) => s.amount)))
-  const topRep = useQuery(sales).orderBy('amount', 'desc').first()
+// useFormula — evaluates a JS expression at build time.
+// In v0.2+ it will transpile to a native spreadsheet formula.
+const total = useFormula(() => rows.reduce((s, r) => s + r.amount, 0))
 
-  return (
-    <Section title="Summary">
-      <Row><Cell>Total revenue</Cell><Cell format="currency">{total}</Cell></Row>
-      <Row><Cell>Top sales rep</Cell><Cell>{topRep?.name}</Cell></Row>
-    </Section>
-  )
+// useQuery — chainable in-memory query over any array.
+const topRep = useQuery(sales).orderBy('amount', 'desc').first()
+
+// useRange — connects to a live backend (Google Sheets, Excel Online).
+// Available in v0.3. Throws during static builds.
+const sales = useRange<Sale>('Sales!A2:D')
+```
+
+### Adapters
+
+Adapters are pluggable. Pass a `WorkbookNode` to any adapter to get the output:
+
+```ts
+import { workbook, csvAdapter, xlsxAdapter } from 'nextsheet'
+import MySheet from './sheets/MySheet.sheet.js'
+
+const wb = workbook('My Report', [MySheet])
+
+const csv  = await csvAdapter.render(wb)   // { mimeType, extension, data: string }
+const xlsx = await xlsxAdapter.render(wb)  // { mimeType, extension, data: Buffer }
+```
+
+Write your own adapter by implementing the `Adapter` interface:
+
+```ts
+import type { Adapter, WorkbookNode, RenderResult } from 'nextsheet'
+
+export class MyAdapter implements Adapter {
+  readonly name = 'my-adapter'
+
+  async render(workbook: WorkbookNode): Promise<RenderResult> {
+    // traverse workbook.sheets → workbook.sheets[i].sections → rows → cells
+    return { mimeType: 'text/plain', extension: 'txt', data: '...' }
+  }
 }
 ```
 
-### One command to ship
+---
 
-```bash
-npx nextsheet build  --target xlsx         --out ./dist/report.xlsx
-npx nextsheet deploy --target google       --id  $SHEET_ID
-npx nextsheet deploy --target excel-online --workbook finance.xlsx
+## CLI reference
+
+### `nextsheet build`
+
+Compile one or more `.sheet.tsx` files into a spreadsheet output.
+
+```
+nextsheet build <files...> [options]
+
+Options:
+  -t, --target <target>   csv | xlsx | supersheet  (default: csv)
+  -o, --out <path>        Output file path
+  -n, --name <name>       Workbook name            (default: Workbook)
 ```
 
-One codebase. Any backend. Fully typed. Reviewable in a pull request. Deployable from CI.
+**Examples:**
+
+```bash
+# Single sheet → CSV
+nextsheet build sheets/Report.sheet.tsx --target csv --out dist/report.csv
+
+# Single sheet → Excel
+nextsheet build sheets/Report.sheet.tsx --target xlsx --out dist/report.xlsx
+
+# Multiple sheets → one workbook
+nextsheet build sheets/Invoices.sheet.tsx sheets/Expenses.sheet.tsx \
+  --target xlsx --name "Finance 2026" --out dist/finance.xlsx
+
+# For SuperSheet hosting (generates nextsheet.output.json)
+nextsheet build sheets/*.sheet.tsx --target supersheet
+```
+
+### `nextsheet dev`
+
+Watch mode — rebuild on save.
+
+```
+nextsheet dev <files...> [options]
+
+Options:
+  -t, --target <target>   csv | xlsx               (default: csv)
+  -o, --out-dir <dir>     Output directory          (default: dist)
+  -n, --name <name>       Workbook name
+```
+
+```bash
+nextsheet dev sheets/Report.sheet.tsx --target xlsx
+```
+
+### `nextsheet deploy`
+
+Deploy directly to SuperSheet via the Supabase REST API.
+
+```
+nextsheet deploy <files...> [options]
+
+Options:
+  -t, --target <target>      supersheet (default)
+  -n, --name <name>          Workbook name
+  --supabase-url <url>       Your Supabase project URL
+  --anon-key <key>           Supabase anon key (public)
+  --jwt <token>              Your session JWT
+  --workbook-id <id>         Update an existing workbook instead of creating one
+```
+
+**Environment variables** (alternative to flags):
+
+```bash
+export SUPABASE_URL=https://xxxx.supabase.co
+export SUPABASE_ANON_KEY=eyJhbGci...
+export SUPABASE_JWT=eyJhbGci...   # from browser: see below
+
+nextsheet deploy sheets/*.sheet.tsx --name "Finance 2026"
+```
+
+**Getting your JWT from the browser:**
+
+```js
+// Open DevTools → Console on your SuperSheet tab
+JSON.parse(
+  localStorage.getItem(
+    Object.keys(localStorage).find(k => k.endsWith('-auth-token'))
+  )
+).access_token
+```
+
+---
+
+## SuperSheet hosting
+
+SuperSheet is the hosted platform for NextSheet — the same relationship Vercel has with Next.js. Your NextSheet project stays in Git; SuperSheet builds, hosts, and lets teams collaborate on the live spreadsheet.
+
+### How to import a NextSheet project into SuperSheet
+
+**Option A — via GitHub (recommended)**
+
+1. Build the SuperSheet output in your project:
+
+   ```bash
+   npx nextsheet build sheets/*.sheet.tsx --target supersheet
+   # → creates nextsheet.output.json
+   ```
+
+2. Commit and push to GitHub:
+
+   ```bash
+   git add nextsheet.output.json
+   git commit -m "build: update nextsheet output"
+   git push
+   ```
+
+3. In SuperSheet, click **Add New → NextSheet Project**, enter your repo URL.
+
+   SuperSheet will:
+   - Detect `nextsheet.output.json` in the repo
+   - Show the workbook name and build timestamp
+   - Import it as a live editable workbook with one click
+
+   If the output file is missing but `.sheet.tsx` files are found, SuperSheet shows which files exist and prompts you to run the build step.
+
+**Option B — direct deploy from CLI**
+
+```bash
+SUPABASE_URL=https://xxxx.supabase.co \
+SUPABASE_ANON_KEY=eyJhbGci... \
+SUPABASE_JWT=eyJhbGci... \
+npx nextsheet deploy sheets/*.sheet.tsx --name "Finance 2026"
+# → Deployed → workbook ID: abc123
+```
+
+To update an existing workbook instead of creating a new one:
+
+```bash
+nextsheet deploy sheets/*.sheet.tsx --workbook-id abc123
+```
+
+### The output format
+
+`nextsheet build --target supersheet` produces a `nextsheet.output.json` file. It is a self-contained snapshot of your workbook as cell-addressed data — the format SuperSheet reads directly:
+
+```json
+{
+  "_nextsheet": true,
+  "version": "0.1",
+  "name": "Finance 2026",
+  "buildAt": "2026-04-17T03:39:27.067Z",
+  "workbookData": {
+    "sheets": {
+      "Invoices 2026": {
+        "A1": { "value": "id",     "format": { "bold": true } },
+        "B1": { "value": "client", "format": { "bold": true } },
+        "C1": { "value": "amount", "format": { "bold": true, "numberFormat": "currency" } }
+      }
+    },
+    "sheetOrder": ["Invoices 2026"]
+  }
+}
+```
+
+The `_nextsheet: true` flag is how SuperSheet's import dialog distinguishes this file from generic JSON.
+
+---
+
+## What's implemented
+
+### Core runtime — `packages/nextsheet` ✅
+
+| Feature | Status |
+| --- | --- |
+| Custom JSX runtime (`jsxImportSource: "nextsheet"`) | ✅ Implemented |
+| `Sheet` component | ✅ Implemented |
+| `Column` component with type system | ✅ Implemented |
+| `Row` / `Cell` / `Section` components | ✅ Implemented |
+| `Header` component | ✅ Implemented |
+| `Formula` component (expression capture) | ✅ Implemented |
+| `defineSheet(name, render)` | ✅ Implemented |
+| `workbook(name, sheets[])` | ✅ Implemented |
+| `useFormula(fn)` — JS evaluation | ✅ Implemented |
+| `useQuery(data)` — chainable in-memory query | ✅ Implemented |
+| `useRange(address)` — live backend hook | ⏳ v0.3 |
+| CSV adapter | ✅ Implemented |
+| XLSX adapter (via ExcelJS) | ✅ Implemented |
+| SuperSheet adapter | ✅ Implemented |
+| Google Sheets adapter | ⏳ v0.3 |
+| Excel Online adapter | ⏳ v0.3 |
+| Pluggable `Adapter` interface | ✅ Implemented |
+
+### Column types — `ColumnType` ✅
+
+`string` · `number` · `currency` · `boolean` · `date` · `percent`
+
+### Cell formatting ✅
+
+`format` · `color` · `bold` · `colspan`
+
+Cell colors: `red` · `green` · `blue` · `yellow` · `orange` · `purple` · `gray` · any hex string
+
+### CLI — `packages/cli` ✅
+
+| Command | Status |
+| --- | --- |
+| `nextsheet build --target csv` | ✅ Implemented |
+| `nextsheet build --target xlsx` | ✅ Implemented |
+| `nextsheet build --target supersheet` | ✅ Implemented |
+| `nextsheet dev` (watch mode) | ✅ Implemented |
+| `nextsheet deploy --target supersheet` | ✅ Implemented |
+| `nextsheet deploy --target google` | ⏳ v0.3 |
+| `nextsheet deploy --target excel-online` | ⏳ v0.3 |
+
+The CLI transpiles `.sheet.tsx` files via esbuild at runtime — no separate build step required. No `tsx` or `ts-node` needed.
+
+### SuperSheet integration ✅
+
+| Feature | Status |
+| --- | --- |
+| SuperSheet adapter (IR → WorkbookData JSON) | ✅ Implemented |
+| `nextsheet.output.json` output format | ✅ Implemented |
+| SuperSheet GitHub import dialog (detects NextSheet repos) | ✅ Implemented |
+| "Add New → NextSheet Project" in SuperSheet dashboard | ✅ Implemented |
+| Direct CLI deploy via Supabase REST API | ✅ Implemented |
+| Auto-detection of `.sheet.tsx` files in repos | ✅ Implemented |
+| Re-deploy / update existing workbook | ✅ Implemented |
+
+---
+
+## What's coming
+
+### v0.2 — Formula translation
+
+`useFormula(() => ...)` currently evaluates the JavaScript expression. v0.2 will transpile it to native spreadsheet formulas — Excel `=SUM(B:B)`, Google Sheets `=SUM(B:B)` — so formulas stay live in the spreadsheet after deployment.
+
+Column formulas (`formula={({ amount }) => <Formula>{amount} * 1.21</Formula>}`) will resolve to proper cell-relative references in XLSX output.
+
+### v0.3 — Google Sheets adapter
+
+Full OAuth flow, deploy pipeline, and bidirectional sync. `useRange('Sheet1!A2:D')` reads live data from a connected sheet. `nextsheet deploy --target google --id $SHEET_ID` pushes to Google Sheets from CI.
+
+### v0.4 — Developer tooling
+
+Browser-based live preview. `nextsheet dev` opens a rendered workbook in the browser and hot-reloads as you type — like Storybook for spreadsheets.
+
+### v0.5 — Agent API
+
+A programmatic authoring surface designed for LLMs. Structured output schemas, typed patch operations, and a prompt layer that lets agents author and verify spreadsheets correctly.
+
+### v1.0 — Stable release
+
+Frozen public API. Full documentation site at `nextsheet.dev`. Learn track. Production guarantees.
+
+---
+
+## Monorepo structure
+
+```
+nextsheet/
+├── packages/
+│   ├── nextsheet/           # Core library
+│   │   └── src/
+│   │       ├── index.ts
+│   │       ├── jsx-runtime.ts
+│   │       ├── types.ts
+│   │       ├── components/  # Sheet, Column, Row, Cell, Section, Header, Formula
+│   │       ├── hooks/       # useFormula, useQuery, useRange
+│   │       ├── runtime/     # defineSheet, workbook
+│   │       └── adapters/    # csv, xlsx, supersheet
+│   └── cli/                 # nextsheet CLI
+│       └── src/
+│           ├── index.ts
+│           ├── loader.ts    # esbuild-based TSX transpiler
+│           └── commands/    # build, dev, deploy
+├── examples/
+│   ├── invoices/            # Schema-mode sheet (defineSheet + Column)
+│   └── quarterly-report/    # Report-mode sheet (function components)
+├── tsconfig.base.json
+└── pnpm-workspace.yaml
+```
 
 ## Principles
-
-These are the constraints we hold ourselves to. When the framework gets something wrong, it is usually because we violated one of them.
 
 1. **Developer experience is the product.** Not a feature. Not a pillar. The product.
 2. **Types are load-bearing.** A sheet that compiles is a sheet that works.
@@ -155,32 +540,15 @@ These are the constraints we hold ourselves to. When the framework gets somethin
 
 If you have ever inherited a 47-tab workbook and wished it had been written in code, NextSheet is for you.
 
-## Documentation
-
-| Section           | Description                                                              |
-| ----------------- | ------------------------------------------------------------------------ |
-| Introduction      | What NextSheet is and the problem it solves.                             |
-| Core concepts     | Sheets, sections, rows, cells, columns, and formulas.                    |
-| Type system       | End-to-end typing for columns, ranges, and cross-sheet references.       |
-| Adapters          | Targeting Google Sheets, Excel Online, `.xlsx`, and CSV.                 |
-| Hooks             | `useRange`, `useFormula`, `useQuery`, and data composition.              |
-| CLI               | `build`, `deploy`, `dev`, and configuration.                             |
-| Agents            | Authoring and editing NextSheet projects with LLMs.                      |
-| Recipes           | Dashboards, invoices, rosters, financial models, ETL outputs.            |
-
-Documentation will live at `nextsheet.dev` when the first release lands. Until then, RFCs in [Discussions](#community) are the source of truth.
-
 ## Roadmap
 
-NextSheet is being built in the open. Early contributors shape the framework's surface area directly.
-
-- **v0.0 — RFC phase (current).** Core API proposal, component model RFC, adapter interface RFC.
-- **v0.1 — Core runtime.** `defineSheet`, primitive components, column and formula type system, CSV adapter.
-- **v0.2 — Excel adapter.** `.xlsx` output with formatting, formulas, and styling primitives.
-- **v0.3 — Google Sheets adapter.** OAuth, deploy pipeline, two-way sync.
-- **v0.4 — Developer tooling.** `nextsheet dev`, hot reload, browser-based live preview.
-- **v0.5 — Agent API.** Programmatic authoring surface designed for LLMs and autonomous editors.
-- **v1.0 — Stable release.** Frozen public API, full documentation, learn track, production guarantees.
+- **v0.0 — RFC phase** ✅ Core API proposal, component model RFC, adapter interface RFC.
+- **v0.1 — Core runtime** ✅ `defineSheet`, primitive components, CSV + XLSX + SuperSheet adapters, CLI (`build`, `dev`, `deploy`), SuperSheet hosting integration.
+- **v0.2 — Formula translation** ⏳ Native spreadsheet formula output (`=SUM`, `=MULTIPLY`), cell-relative references in XLSX.
+- **v0.3 — Google Sheets adapter** ⏳ OAuth, deploy pipeline, two-way sync, `useRange` hook.
+- **v0.4 — Developer tooling** ⏳ `nextsheet dev` browser preview, hot reload.
+- **v0.5 — Agent API** ⏳ Programmatic authoring surface designed for LLMs and autonomous editors.
+- **v1.0 — Stable release** ⏳ Frozen public API, full documentation, learn track, production guarantees.
 
 ## The platform
 
@@ -210,6 +578,7 @@ Strong places to start:
 - Open or comment on an **RFC** in Discussions.
 - Pick up a `good first issue` in the tracker.
 - Write a **recipe** demonstrating NextSheet solving a real workflow.
+- Build a new **adapter** (Notion, Airtable, Postgres, Parquet…).
 - Improve documentation, examples, or the learn track.
 - Help shape the brand, the website, or the visual identity.
 

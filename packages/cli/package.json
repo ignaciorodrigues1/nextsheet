@@ -1,0 +1,34 @@
+{
+  "name": "nextsheet-cli",
+  "version": "0.1.0",
+  "description": "NextSheet CLI — build, dev, and deploy spreadsheet apps.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "nextsheet": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "nextsheet": "^0.1.0",
+    "commander": "^12.0.0",
+    "chokidar": "^3.6.0",
+    "esbuild": "^0.24.0",
+    "picocolors": "^1.0.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@nextsheet/example-invoices",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nextsheet build sheets/Invoices.sheet.tsx --target csv --out dist/invoices.csv",
+    "build:xlsx": "nextsheet build sheets/Invoices.sheet.tsx --target xlsx --out dist/invoices.xlsx",
+    "dev": "nextsheet dev sheets/Invoices.sheet.tsx"
+  },
+  "dependencies": {
+    "nextsheet": "workspace:*",
+    "@nextsheet/cli": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

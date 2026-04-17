@@ -1,0 +1,17 @@
+{
+  "name": "@nextsheet/example-quarterly-report",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nextsheet build sheets/QuarterlyReport.sheet.tsx --target csv --out dist/q1-report.csv",
+    "build:xlsx": "nextsheet build sheets/QuarterlyReport.sheet.tsx --target xlsx --out dist/q1-report.xlsx"
+  },
+  "dependencies": {
+    "nextsheet": "workspace:*",
+    "@nextsheet/cli": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

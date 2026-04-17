@@ -1,0 +1,47 @@
+{
+  "name": "nextsheet",
+  "version": "0.1.0",
+  "description": "The framework for the spreadsheet era.",
+  "keywords": ["spreadsheet", "excel", "google-sheets", "csv", "xlsx", "framework"],
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./jsx-runtime": {
+      "import": "./dist/jsx-runtime.js",
+      "types": "./dist/jsx-runtime.d.ts"
+    },
+    "./jsx-dev-runtime": {
+      "import": "./dist/jsx-runtime.js",
+      "types": "./dist/jsx-runtime.d.ts"
+    },
+    "./adapters/*": {
+      "import": "./dist/adapters/*.js",
+      "types": "./dist/adapters/*.d.ts"
+    },
+    "./adapters/supersheet": {
+      "import": "./dist/adapters/supersheet.js",
+      "types": "./dist/adapters/supersheet.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
