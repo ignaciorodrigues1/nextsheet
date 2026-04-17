@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nextsheet build sheets/Invoices.sheet.tsx --target csv --out dist/invoices.csv",
-    "build:xlsx": "nextsheet build sheets/Invoices.sheet.tsx --target xlsx --out dist/invoices.xlsx",
-    "dev": "nextsheet dev sheets/Invoices.sheet.tsx"
+    "dev": "nextsheet dev sheets/Invoices.sheet.tsx sheets/Clients.sheet.tsx",
+    "build": "npm run build:csv && npm run build:xlsx && npm run build:html",
+    "build:csv": "nextsheet build sheets/Invoices.sheet.tsx sheets/Clients.sheet.tsx --target csv --out dist/workbook.csv",
+    "build:xlsx": "nextsheet build sheets/Invoices.sheet.tsx sheets/Clients.sheet.tsx --target xlsx --out dist/workbook.xlsx",
+    "build:html": "nextsheet build sheets/Invoices.sheet.tsx sheets/Clients.sheet.tsx --target html --out dist/index.html"
   },
   "dependencies": {
     "nextsheet": "workspace:*",

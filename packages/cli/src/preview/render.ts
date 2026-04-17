@@ -648,36 +648,48 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
   <div id="error-bar"></div>
 
   <script>
+    // ── Tab navigation with localStorage persistence ────────────────
+    var LS_KEY = 'nextsheet:tab:${escapeHTML(wb.name)}'
+
     function selectTab(idx) {
-      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx))
-      document.querySelectorAll('.panel').forEach((p, i) => p.classList.toggle('active', i === idx))
+      document.querySelectorAll('.tab').forEach(function(t, i) { t.classList.toggle('active', i === idx) })
+      document.querySelectorAll('.panel').forEach(function(p, i) { p.classList.toggle('active', i === idx) })
+      try { localStorage.setItem(LS_KEY, String(idx)) } catch(e) {}
     }
 
+    // Restore last active tab on load
+    ;(function() {
+      try {
+        var saved = parseInt(localStorage.getItem(LS_KEY) || '0', 10)
+        var count = document.querySelectorAll('.tab').length
+        if (!isNaN(saved) && saved >= 0 && saved < count) selectTab(saved)
+      } catch(e) {}
+    })()
+
     // ── SSE hot-reload ──────────────────────────────────────────────
-    const dot      = document.getElementById('dot')
-    const buildEl  = document.getElementById('build-time')
-    const errorBar = document.getElementById('error-bar')
+    var dot      = document.getElementById('dot')
+    var buildEl  = document.getElementById('build-time')
+    var errorBar = document.getElementById('error-bar')
 
     function connect() {
-      const es = new EventSource('/__nextsheet_sse')
+      var es = new EventSource('/__nextsheet_sse')
 
-      es.addEventListener('reload', () => location.reload())
+      es.addEventListener('reload', function() { location.reload() })
 
-      es.addEventListener('error-build', (e) => {
+      es.addEventListener('error-build', function(e) {
         errorBar.textContent = e.data
         errorBar.style.display = 'block'
         dot.classList.add('error')
         dot.title = 'Build error'
       })
 
-      es.onopen = () => {
+      es.onopen = function() {
         dot.classList.remove('error')
         dot.title = 'Watching for changes'
         errorBar.style.display = 'none'
       }
 
-      es.onerror = () => {
-        // Server restarted or network issue — retry after 1s
+      es.onerror = function() {
         es.close()
         setTimeout(connect, 1000)
       }

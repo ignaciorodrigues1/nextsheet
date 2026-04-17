@@ -8,6 +8,7 @@
 
 import type {
   CellNode,
+  ChartNode,
   ColumnNode,
   RenderResult,
   RowNode,
@@ -39,9 +40,28 @@ interface SuperCellData {
 
 type SuperSheetData = Record<string, SuperCellData>
 
+// ─── Chart types for SuperSheet output ───────────────────────────────────────
+
+interface SuperChartSeries {
+  name: string
+  column?: string
+  data?: readonly number[]
+  color?: string
+}
+
+interface SuperChart {
+  sheet: string
+  type: string
+  title?: string
+  xAxis?: string
+  showLegend?: boolean
+  series: SuperChartSeries[]
+}
+
 interface SuperWorkbookData {
   sheets: Record<string, SuperSheetData>
   sheetOrder: string[]
+  charts?: SuperChart[]
 }
 
 /** The output file format. SuperSheet detects _nextsheet to know it's a NextSheet project. */
@@ -189,6 +209,22 @@ function convertSheet(sheet: SheetNode): SuperSheetData {
   return data
 }
 
+function convertChart(chart: ChartNode, sheetName: string): SuperChart {
+  return {
+    sheet: sheetName,
+    type: chart.type,
+    title: chart.title,
+    xAxis: chart.xAxis,
+    showLegend: chart.showLegend,
+    series: chart.series.map((s) => ({
+      name: s.name,
+      column: s.column,
+      data: s.data,
+      color: s.color,
+    })),
+  }
+}
+
 // ─── Adapter ──────────────────────────────────────────────────────────────────
 
 export class SuperSheetAdapter extends BaseAdapter {
@@ -200,10 +236,18 @@ export class SuperSheetAdapter extends BaseAdapter {
       sheetOrder: [],
     }
 
+    const allCharts: SuperChart[] = []
+
     for (const sheet of workbook.sheets) {
       superWorkbook.sheets[sheet.name] = convertSheet(sheet)
       superWorkbook.sheetOrder.push(sheet.name)
+
+      for (const chart of sheet.charts) {
+        allCharts.push(convertChart(chart, sheet.name))
+      }
     }
+
+    if (allCharts.length > 0) superWorkbook.charts = allCharts
 
     const output: NextSheetOutput = {
       _nextsheet: true,

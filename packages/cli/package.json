@@ -1,6 +1,6 @@
 {
   "name": "nextsheet-cli",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "NextSheet CLI — build, dev, and deploy spreadsheet apps.",
   "license": "MIT",
   "type": "module",
