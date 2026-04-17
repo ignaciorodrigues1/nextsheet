@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url'
 import type { SheetDefinition, SheetNode, WorkbookNode } from 'nextsheet'
 
 type SheetModule = {
-  default: SheetDefinition | SheetNode | ((...args: unknown[]) => SheetNode)
+  default: SheetDefinition | SheetNode | WorkbookNode | ((...args: unknown[]) => SheetNode)
 }
 
 // The CLI package has nextsheet in its own node_modules — use that for resolution.
@@ -74,11 +74,17 @@ export async function loadWorkbook(filePaths: string[], name = 'Workbook'): Prom
       if (mod.default === undefined) {
         throw new Error(
           `[nextsheet] "${filePath}" has no default export. ` +
-            'Export a sheet via defineSheet() or a function component.'
+            'Export a sheet via defineSheet(), a function component, or workbook().'
         )
       }
 
-      sheets.push(resolveSheetNode(mod.default, filePath))
+      // A file may export a full WorkbookNode — spread its sheets in.
+      const exp = mod.default
+      if (typeof exp === 'object' && exp !== null && 'kind' in exp && (exp as WorkbookNode).kind === 'workbook') {
+        sheets.push(...(exp as WorkbookNode).sheets)
+      } else {
+        sheets.push(resolveSheetNode(exp as Exclude<typeof exp, WorkbookNode>, filePath))
+      }
     } finally {
       await unlink(tmpFile).catch(() => undefined)
     }
