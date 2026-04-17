@@ -1,6 +1,6 @@
 {
   "name": "nextsheet-cli",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "NextSheet CLI — build, dev, and deploy spreadsheet apps.",
   "license": "MIT",
   "type": "module",
@@ -23,7 +23,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "nextsheet": "^0.1.0",
+    "nextsheet": "^0.2.0",
     "commander": "^12.0.0",
     "chokidar": "^3.6.0",
     "esbuild": "^0.24.0",

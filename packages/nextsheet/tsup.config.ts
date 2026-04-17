@@ -7,6 +7,7 @@ export default defineConfig({
     'adapters/csv': 'src/adapters/csv.ts',
     'adapters/xlsx': 'src/adapters/xlsx.ts',
     'adapters/supersheet': 'src/adapters/supersheet.ts',
+    backends: 'src/backends/index.ts',
   },
   format: ['esm'],
   dts: true,

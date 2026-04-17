@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "nextsheet": "workspace:*",
-    "@nextsheet/cli": "workspace:*"
+    "nextsheet-cli": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

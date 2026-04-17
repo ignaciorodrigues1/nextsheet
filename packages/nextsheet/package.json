@@ -1,6 +1,6 @@
 {
   "name": "nextsheet",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "The framework for the spreadsheet era.",
   "keywords": [
     "spreadsheet",
@@ -32,6 +32,10 @@
     "./adapters/supersheet": {
       "import": "./dist/adapters/supersheet.js",
       "types": "./dist/adapters/supersheet.d.ts"
+    },
+    "./backends": {
+      "import": "./dist/backends.js",
+      "types": "./dist/backends.d.ts"
     }
   },
   "main": "./dist/index.js",

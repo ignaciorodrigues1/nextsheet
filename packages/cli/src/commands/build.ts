@@ -6,6 +6,8 @@ import { csvAdapter, xlsxAdapter, superSheetAdapter } from 'nextsheet'
 import { log } from '../logger.js'
 import { loadWorkbook } from '../loader.js'
 import { renderWorkbookHTML } from '../preview/render.js'
+import { resolveBackend, backendOptions } from '../backends/resolve.js'
+import { loadEnv } from '../env.js'
 
 type ExtendedTarget = BuildTarget | 'supersheet' | 'html'
 
@@ -33,20 +35,35 @@ function defaultOut(input: string, extension: string, target: ExtendedTarget): s
 }
 
 export function buildCommand(program: Command): void {
-  program
+  const cmd = program
     .command('build <files...>')
     .description('Compile sheet files to a spreadsheet format.')
     .option('-t, --target <target>', 'output target: csv | xlsx | html | supersheet', 'csv')
     .option('-o, --out <path>', 'output file path')
     .option('-n, --name <name>', 'workbook name', 'Workbook')
-    .action(async (files: string[], opts: { target: string; out?: string; name: string }) => {
+
+  for (const [flag, desc] of backendOptions) cmd.option(flag, desc)
+
+  cmd.action(async (files: string[], opts: {
+    target: string
+    out?: string
+    name: string
+    googleSpreadsheetId?: string
+    googleAccessToken?: string
+    googleCredentials?: string
+    microsoftToken?: string
+    driveItemId?: string
+  }) => {
       const target = opts.target as ExtendedTarget
       const adapter = resolveAdapter(target)
 
+      loadEnv('production')
+      const backend = resolveBackend(opts)
+      if (backend) log.dim(`Using backend: ${backend.name}`)
       log.info(`Building ${files.length} sheet(s) → ${target}`)
 
       try {
-        const wb = await loadWorkbook(files, opts.name)
+        const wb = await loadWorkbook(files, opts.name, backend)
 
         let outPath: string
         let data: string | Buffer

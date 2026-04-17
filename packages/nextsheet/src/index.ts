@@ -13,6 +13,14 @@ export { Sheet } from './components/Sheet.js'
 export { defineSheet } from './runtime/defineSheet.js'
 export { workbook } from './runtime/workbook.js'
 
+// ─── Range context (used by CLI for two-pass live-backend rendering) ──────────
+export {
+  startCollecting,
+  stopCollecting,
+  populateCache,
+  clearRangeCache,
+} from './runtime/range-context.js'
+
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 export { useFormula } from './hooks/useFormula.js'
 export { useQuery } from './hooks/useQuery.js'
