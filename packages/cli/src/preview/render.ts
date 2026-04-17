@@ -1,5 +1,6 @@
 import type {
   CellNode,
+  ChartNode,
   ColumnNode,
   RowNode,
   SectionNode,
@@ -129,7 +130,172 @@ function renderSection(section: SectionNode, columns: ColumnNode[], colCount: nu
   return rows.join('\n')
 }
 
-function renderSheet(sheet: SheetNode): string {
+// ─── Chart rendering ──────────────────────────────────────────────────────────
+
+const CHART_COLORS = [
+  '#3b82f6', '#ef4444', '#22c55e', '#f97316',
+  '#a855f7', '#eab308', '#06b6d4', '#ec4899',
+  '#14b8a6', '#f43f5e',
+]
+
+function getAllDataRows(sheet: SheetNode): RowNode[] {
+  const out: RowNode[] = []
+  for (const section of sheet.sections) {
+    for (const r of section.rows) if (r.header !== true) out.push(r)
+  }
+  for (const r of sheet.rows) if (r.header !== true) out.push(r)
+  return out
+}
+
+function resolveChartjsType(type: ChartNode['type']): string {
+  switch (type) {
+    case 'donut':        return 'doughnut'
+    case 'stacked-bar':  return 'bar'
+    case 'stacked-area': return 'line'
+    case 'horizontal-bar': return 'bar'
+    case 'area':         return 'line'
+    default:             return type
+  }
+}
+
+function renderChart(chart: ChartNode, sheet: SheetNode, sheetIdx: number, chartIdx: number): string {
+  const canvasId = `chart-${sheetIdx}-${chartIdx}`
+  const dataRows = getAllDataRows(sheet)
+  const type = chart.type
+
+  const isCircular = type === 'pie' || type === 'donut'
+  const isArea     = type === 'area' || type === 'stacked-area'
+  const isStacked  = type === 'stacked-bar' || type === 'stacked-area'
+  const isHoriz    = type === 'horizontal-bar'
+  const isScatter  = type === 'scatter'
+  const isBubble   = type === 'bubble'
+  const isRadar    = type === 'radar'
+  const isLine     = type === 'line' || isArea
+
+  // Resolve x-axis labels
+  let labels: string[]
+  if (chart.xAxis !== undefined) {
+    const xIdx = sheet.columns.findIndex((c) => c.name === chart.xAxis)
+    labels = xIdx >= 0
+      ? dataRows.map((r) => String(r.cells[xIdx]?.value ?? ''))
+      : dataRows.map((_, i) => String(i + 1))
+  } else {
+    labels = dataRows.map((_, i) => String(i + 1))
+  }
+
+  const chartjsType = resolveChartjsType(type)
+
+  // Build datasets
+  const datasets = chart.series.map((series, i) => {
+    const color = series.color ?? CHART_COLORS[i % CHART_COLORS.length] ?? '#3b82f6'
+    let data: unknown[]
+
+    if (series.points !== undefined) {
+      // Explicit {x,y,r} points (scatter / bubble)
+      data = [...series.points]
+    } else {
+      // Extract numeric values from column ref or inline data array
+      let values: number[]
+      if (series.column !== undefined) {
+        const colIdx = sheet.columns.findIndex((c) => c.name === series.column)
+        values = colIdx >= 0
+          ? dataRows.map((r) => {
+              const v = r.cells[colIdx]?.value
+              return typeof v === 'number' ? v : parseFloat(String(v ?? 0)) || 0
+            })
+          : dataRows.map(() => 0)
+      } else {
+        values = series.data ? [...series.data] : []
+      }
+
+      if (isScatter) {
+        data = values.map((y, x) => ({ x, y }))
+      } else if (isBubble) {
+        data = values.map((y, x) => ({ x, y, r: 6 }))
+      } else {
+        data = values
+      }
+    }
+
+    // Background & border colors
+    const bgColor   = isCircular
+      ? CHART_COLORS.map((c) => c + 'cc')
+      : isLine ? color + '33' : color + 'cc'
+    const borderCol = isCircular ? CHART_COLORS : color
+
+    const ds: Record<string, unknown> = {
+      label: series.name,
+      data,
+      backgroundColor: bgColor,
+      borderColor: borderCol,
+      borderWidth: isCircular ? 1 : 2,
+    }
+
+    if (isLine) {
+      ds.fill    = isArea
+      ds.tension = 0.3
+    }
+    if (isScatter || isBubble) ds.pointRadius = 5
+    else if (isLine)           ds.pointRadius = 3
+
+    return JSON.stringify(ds)
+  })
+
+  // Scales config — omitted for circular + radar (Chart.js handles them natively)
+  const gridColor = 'rgba(128,128,128,0.15)'
+  let scalesStr: string
+  if (isCircular || isRadar) {
+    scalesStr = 'undefined'
+  } else {
+    scalesStr = JSON.stringify({
+      x: { stacked: isStacked, grid: { color: gridColor } },
+      y: { stacked: isStacked, grid: { color: gridColor } },
+    })
+  }
+
+  const height = chart.height ?? 320
+  const widthStyle = chart.width != null && chart.width > 0
+    ? `max-width:${chart.width}px;` : ''
+
+  const titleCfg = chart.title !== undefined
+    ? `title:{display:true,text:${JSON.stringify(chart.title)},font:{size:14}},` : ''
+
+  const showLegend = chart.showLegend !== false
+
+  return `
+<div class="chart-wrap">
+  <canvas id="${canvasId}" style="${widthStyle}height:${height}px"></canvas>
+</div>
+<script>
+(function(){
+  var ctx = document.getElementById(${JSON.stringify(canvasId)});
+  if (!ctx || !window.Chart) return;
+  new Chart(ctx, {
+    type: ${JSON.stringify(chartjsType)},
+    data: {
+      labels: ${JSON.stringify(labels)},
+      datasets: [${datasets.join(',')}]
+    },
+    options: {
+      indexAxis: ${isHoriz ? "'y'" : "'x'"},
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        ${titleCfg}
+        legend: {
+          display: ${showLegend},
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { size: 11 } }
+        }
+      },
+      scales: ${scalesStr}
+    }
+  });
+})();
+</script>`
+}
+
+function renderSheet(sheet: SheetNode, sheetIdx = 0): string {
   const rows: string[] = []
   const columns = sheet.columns
   const colCount = Math.max(
@@ -171,7 +337,14 @@ function renderSheet(sheet: SheetNode): string {
     rows.push(renderRow(row, columns, colCount))
   }
 
-  return `<table class="sheet-table"><tbody>${rows.join('\n')}</tbody></table>`
+  const table = `<table class="sheet-table"><tbody>${rows.join('\n')}</tbody></table>`
+
+  // Charts
+  const charts = sheet.charts
+    .map((chart, chartIdx) => renderChart(chart, sheet, sheetIdx, chartIdx))
+    .join('\n')
+
+  return charts.length > 0 ? `${table}\n${charts}` : table
 }
 
 // ─── Full page HTML ───────────────────────────────────────────────────────────
@@ -187,7 +360,7 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
 
   const panels = sheets
     .map((s, i) =>
-      `<div class="panel${i === 0 ? ' active' : ''}" id="panel-${i}">${renderSheet(s)}</div>`
+      `<div class="panel${i === 0 ? ' active' : ''}" id="panel-${i}">${renderSheet(s, i)}</div>`
     )
     .join('')
 
@@ -199,6 +372,7 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHTML(wb.name)} — NextSheet dev</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -410,6 +584,16 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
       color: var(--formula);
       font-style: italic;
       font-size: 11px;
+    }
+
+    /* ── Charts ──────────────────────────────────────────────────── */
+    .chart-wrap {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
     }
 
     /* ── Empty state ─────────────────────────────────────────────── */

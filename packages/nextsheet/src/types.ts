@@ -1,3 +1,44 @@
+// ─── Chart types ─────────────────────────────────────────────────────────────
+
+export type ChartType =
+  | 'bar'
+  | 'horizontal-bar'
+  | 'line'
+  | 'area'
+  | 'stacked-bar'
+  | 'stacked-area'
+  | 'pie'
+  | 'donut'
+  | 'scatter'
+  | 'bubble'
+  | 'radar'
+
+export interface ChartPoint {
+  readonly x: number
+  readonly y: number
+  readonly r?: number
+}
+
+export interface ChartSeriesNode {
+  readonly kind: 'chart-series'
+  readonly name: string
+  readonly column?: string
+  readonly data?: readonly number[]
+  readonly points?: readonly ChartPoint[]
+  readonly color?: string
+}
+
+export interface ChartNode {
+  readonly kind: 'chart'
+  readonly type: ChartType
+  readonly title?: string
+  readonly xAxis?: string
+  readonly showLegend?: boolean
+  readonly series: ChartSeriesNode[]
+  readonly width?: number
+  readonly height?: number
+}
+
 // ─── Column types ────────────────────────────────────────────────────────────
 
 export type ColumnType =
@@ -76,6 +117,7 @@ export interface SheetNode {
   readonly columns: ColumnNode[]
   readonly sections: SectionNode[]
   readonly rows: RowNode[]
+  readonly charts: ChartNode[]
 }
 
 export interface WorkbookNode {
@@ -180,5 +222,23 @@ export interface FormulaProps {
   readonly children: string
 }
 
+export interface ChartSeriesProps {
+  readonly name: string
+  readonly column?: string
+  readonly data?: readonly number[]
+  readonly points?: readonly ChartPoint[]
+  readonly color?: string
+}
+
+export interface ChartProps {
+  readonly type: ChartType
+  readonly title?: string
+  readonly xAxis?: string
+  readonly showLegend?: boolean
+  readonly width?: number
+  readonly height?: number
+  readonly children?: ChartSeriesNode | ChartSeriesNode[]
+}
+
 // Union of all possible children under Sheet
-export type SheetChild = ColumnNode | SectionNode | RowNode | HeaderNode
+export type SheetChild = ColumnNode | SectionNode | RowNode | HeaderNode | ChartNode

@@ -1,4 +1,6 @@
 export { Cell } from './Cell.js'
+export { Chart } from './Chart.js'
+export { ChartSeries } from './ChartSeries.js'
 export { Column } from './Column.js'
 export { Formula } from './Formula.js'
 export { Header } from './Header.js'

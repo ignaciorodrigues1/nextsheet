@@ -1,4 +1,5 @@
 import type {
+  ChartNode,
   ColumnNode,
   HeaderNode,
   RowNode,
@@ -19,6 +20,9 @@ function isRowNode(v: unknown): v is RowNode {
 function isHeaderNode(v: unknown): v is HeaderNode {
   return typeof v === 'object' && v !== null && (v as HeaderNode).kind === 'header'
 }
+function isChartNode(v: unknown): v is ChartNode {
+  return typeof v === 'object' && v !== null && (v as ChartNode).kind === 'chart'
+}
 
 export function Sheet({ name = 'Sheet', theme, children }: SheetProps): SheetNode {
   const raw = Array.isArray(children) ? children : children !== undefined ? [children] : []
@@ -29,6 +33,7 @@ export function Sheet({ name = 'Sheet', theme, children }: SheetProps): SheetNod
   const sections = flat.filter(isSectionNode)
   // Rows placed directly under Sheet become an implicit unnamed section
   const directRows = flat.filter(isRowNode)
+  const charts = flat.filter(isChartNode)
 
   return {
     kind: 'sheet',
@@ -38,5 +43,6 @@ export function Sheet({ name = 'Sheet', theme, children }: SheetProps): SheetNod
     columns,
     sections,
     rows: directRows,
+    charts,
   }
 }

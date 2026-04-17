@@ -1,5 +1,7 @@
 // ─── Components ───────────────────────────────────────────────────────────────
 export { Cell } from './components/Cell.js'
+export { Chart } from './components/Chart.js'
+export { ChartSeries } from './components/ChartSeries.js'
 export { Column } from './components/Column.js'
 export { Formula } from './components/Formula.js'
 export { Header } from './components/Header.js'
@@ -30,6 +32,12 @@ export type {
   CellColor,
   CellNode,
   CellProps,
+  ChartNode,
+  ChartPoint,
+  ChartProps,
+  ChartSeriesNode,
+  ChartSeriesProps,
+  ChartType,
   ColumnNode,
   ColumnProps,
   ColumnRefs,

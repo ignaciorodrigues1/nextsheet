@@ -14,6 +14,7 @@
     <a href="#the-thesis">Thesis</a> ·
     <a href="#getting-started">Getting Started</a> ·
     <a href="#how-it-works">How it works</a> ·
+    <a href="#charts">Charts</a> ·
     <a href="#supersheet-hosting">SuperSheet</a> ·
     <a href="#roadmap">Roadmap</a> ·
     <a href="#community">Community</a>
@@ -209,6 +210,171 @@ const topRep = useQuery(sales).orderBy('amount', 'desc').first()
 // useRange — connects to a live backend (Google Sheets, Excel Online).
 // Available in v0.3. Throws during static builds.
 const sales = useRange<Sale>('Sales!A2:D')
+```
+
+### Charts
+
+NextSheet ships two chart components — `<Chart>` and `<ChartSeries>` — that can be placed anywhere inside a `<Sheet>`. In dev mode (`nextsheet dev`) they render as interactive Chart.js visualizations. Adapters can consume the `charts` array in `SheetNode` to produce native chart output (the XLSX adapter has ExcelJS chart support available).
+
+```tsx
+import { Sheet, Column, Section, Row, Cell, Chart, ChartSeries } from 'nextsheet'
+
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+const revenue  = [42_000, 58_000, 51_000, 67_000, 73_000, 88_000]
+const expenses = [28_000, 33_000, 30_000, 38_000, 41_000, 45_000]
+
+export default function Dashboard() {
+  return (
+    <Sheet name="Dashboard">
+      <Column name="Month"    type="string"   primary />
+      <Column name="Revenue"  type="currency" />
+      <Column name="Expenses" type="currency" />
+
+      <Section>
+        {months.map((m, i) => (
+          <Row key={m}>
+            <Cell>{m}</Cell>
+            <Cell>{revenue[i]}</Cell>
+            <Cell>{expenses[i]}</Cell>
+          </Row>
+        ))}
+      </Section>
+
+      {/* columns reference the sheet data automatically */}
+      <Chart type="bar" title="Revenue vs Expenses" xAxis="Month">
+        <ChartSeries name="Revenue"  column="Revenue"  color="#22c55e" />
+        <ChartSeries name="Expenses" column="Expenses" color="#ef4444" />
+      </Chart>
+    </Sheet>
+  )
+}
+```
+
+#### Chart types
+
+| Type | Description | Chart.js equivalent |
+| --- | --- | --- |
+| `bar` | Vertical bars, one bar per series per category | `bar` |
+| `horizontal-bar` | Horizontal bars (flips axes) | `bar` + `indexAxis: 'y'` |
+| `line` | Line chart with optional data points | `line` |
+| `area` | Filled line chart | `line` + `fill: true` |
+| `stacked-bar` | Bars stacked on top of each other | `bar` + `stacked` |
+| `stacked-area` | Stacked filled lines | `line` + `fill` + `stacked` |
+| `pie` | Circular slice chart | `pie` |
+| `donut` | Pie with a hollow center | `doughnut` |
+| `scatter` | Points at (x, y) coordinates | `scatter` |
+| `bubble` | Points with variable radius (x, y, r) | `bubble` |
+| `radar` | Spider/radar polygon | `radar` |
+
+#### `<Chart>` props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `ChartType` | required | Chart type (see table above) |
+| `title` | `string` | — | Chart title displayed above the visualization |
+| `xAxis` | `string` | — | Column name to use as x-axis labels |
+| `showLegend` | `boolean` | `true` | Show the series legend |
+| `width` | `number` | — | Max width in pixels |
+| `height` | `number` | `320` | Height in pixels |
+
+#### `<ChartSeries>` props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | required | Series label shown in legend and tooltips |
+| `column` | `string` | — | Column name in the sheet to read values from |
+| `data` | `number[]` | — | Inline array of values (used when `column` is not set) |
+| `points` | `ChartPoint[]` | — | Explicit `{x, y, r?}` points for `scatter` / `bubble` |
+| `color` | `string` | auto | Hex color or CSS named color |
+
+#### Data sources
+
+Series can pull data from the sheet's columns or use inline arrays:
+
+```tsx
+{/* column mode — reads from Column name="Revenue" rows */}
+<ChartSeries name="Revenue" column="Revenue" />
+
+{/* inline mode — data is hardcoded in the component */}
+<ChartSeries name="Forecast" data={[55_000, 62_000, 70_000]} />
+
+{/* point mode — for scatter and bubble charts */}
+<ChartSeries name="Products" points={[
+  { x: 10, y: 30, r: 5 },
+  { x: 25, y: 50, r: 8 },
+  { x: 40, y: 20, r: 3 },
+]} />
+```
+
+#### Example: every chart type
+
+```tsx
+{/* Bar — grouped vertical bars */}
+<Chart type="bar" title="Sales by Quarter" xAxis="Quarter">
+  <ChartSeries name="2024" column="Sales2024" color="#3b82f6" />
+  <ChartSeries name="2025" column="Sales2025" color="#22c55e" />
+</Chart>
+
+{/* Horizontal bar — useful for category rankings */}
+<Chart type="horizontal-bar" title="Revenue by Region" xAxis="Region">
+  <ChartSeries name="Revenue" column="Revenue" />
+</Chart>
+
+{/* Line — trend over time */}
+<Chart type="line" title="Monthly Active Users">
+  <ChartSeries name="MAU" data={[1200, 1800, 2400, 3100, 3900]} />
+</Chart>
+
+{/* Area — same as line but filled */}
+<Chart type="area" title="Cumulative Revenue" xAxis="Month">
+  <ChartSeries name="Revenue" column="Revenue" color="#6366f1" />
+</Chart>
+
+{/* Stacked bar — composition of parts */}
+<Chart type="stacked-bar" title="Cost Breakdown" xAxis="Month">
+  <ChartSeries name="Engineering" column="Engineering" color="#3b82f6" />
+  <ChartSeries name="Marketing"   column="Marketing"   color="#f97316" />
+  <ChartSeries name="Operations"  column="Operations"  color="#a855f7" />
+</Chart>
+
+{/* Stacked area — share over time */}
+<Chart type="stacked-area" title="Traffic by Channel" xAxis="Week">
+  <ChartSeries name="Organic" column="Organic" color="#22c55e" />
+  <ChartSeries name="Paid"    column="Paid"    color="#3b82f6" />
+  <ChartSeries name="Referral" column="Referral" color="#f97316" />
+</Chart>
+
+{/* Pie — part-of-whole */}
+<Chart type="pie" title="Market Share" xAxis="Company" showLegend={true}>
+  <ChartSeries name="Share" column="Share" />
+</Chart>
+
+{/* Donut — same as pie, hollow center */}
+<Chart type="donut" title="Budget Allocation" xAxis="Category">
+  <ChartSeries name="Allocation" column="Budget" />
+</Chart>
+
+{/* Scatter — two-variable correlation */}
+<Chart type="scatter" title="Price vs Rating">
+  <ChartSeries name="Products" points={[
+    { x: 10, y: 4.2 }, { x: 25, y: 3.8 },
+    { x: 50, y: 4.7 }, { x: 80, y: 4.1 },
+  ]} />
+</Chart>
+
+{/* Bubble — three-variable comparison */}
+<Chart type="bubble" title="Revenue / Margin / Volume">
+  <ChartSeries name="Products" points={[
+    { x: 20, y: 30, r: 5 }, { x: 40, y: 55, r: 12 },
+    { x: 60, y: 40, r: 8 }, { x: 80, y: 70, r: 16 },
+  ]} />
+</Chart>
+
+{/* Radar — multi-axis comparison */}
+<Chart type="radar" title="Skill Assessment">
+  <ChartSeries name="Alice" data={[85, 92, 78, 95, 80]} color="#3b82f6" />
+  <ChartSeries name="Bob"   data={[70, 85, 90, 75, 88]} color="#ef4444" />
+</Chart>
 ```
 
 ### Adapters
@@ -422,6 +588,7 @@ The `_nextsheet: true` flag is how SuperSheet's import dialog distinguishes this
 | `useFormula(fn)` — JS evaluation | ✅ Implemented |
 | `useQuery(data)` — chainable in-memory query | ✅ Implemented |
 | `useRange(address)` — live backend hook | ⏳ v0.3 |
+| `Chart` + `ChartSeries` components | ✅ Implemented |
 | CSV adapter | ✅ Implemented |
 | XLSX adapter (via ExcelJS) | ✅ Implemented |
 | SuperSheet adapter | ✅ Implemented |
@@ -432,6 +599,10 @@ The `_nextsheet: true` flag is how SuperSheet's import dialog distinguishes this
 ### Column types — `ColumnType` ✅
 
 `string` · `number` · `currency` · `boolean` · `date` · `percent`
+
+### Chart types — `ChartType` ✅
+
+`bar` · `horizontal-bar` · `line` · `area` · `stacked-bar` · `stacked-area` · `pie` · `donut` · `scatter` · `bubble` · `radar`
 
 ### Cell formatting ✅
 
@@ -503,7 +674,7 @@ nextsheet/
 │   │       ├── index.ts
 │   │       ├── jsx-runtime.ts
 │   │       ├── types.ts
-│   │       ├── components/  # Sheet, Column, Row, Cell, Section, Header, Formula
+│   │       ├── components/  # Sheet, Column, Row, Cell, Section, Header, Formula, Chart, ChartSeries
 │   │       ├── hooks/       # useFormula, useQuery, useRange
 │   │       ├── runtime/     # defineSheet, workbook
 │   │       └── adapters/    # csv, xlsx, supersheet
