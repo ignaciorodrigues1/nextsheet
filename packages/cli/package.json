@@ -1,13 +1,15 @@
 {
   "name": "nextsheet-cli",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "NextSheet CLI — build, dev, and deploy spreadsheet apps.",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "nextsheet": "./dist/index.js"
+    "nextsheet": "dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
