@@ -1,6 +1,6 @@
 {
   "name": "create-nextsheet-app",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Create a NextSheet workbook app in seconds.",
   "license": "MIT",
   "type": "module",

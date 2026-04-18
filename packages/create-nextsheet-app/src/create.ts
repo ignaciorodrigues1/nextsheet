@@ -27,7 +27,7 @@ function installCommand(pm: string): { cmd: string; args: string[] } {
 
 function runProcess(cmd: string, args: string[], cwd: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, stdio: 'inherit', shell: true })
+    const child = spawn([cmd, ...args].join(' '), { cwd, stdio: 'inherit', shell: true })
     child.on('close', (code: number | null) => {
       if (code === 0) resolve()
       else reject(new Error(`${cmd} exited with code ${code ?? 1}`))
