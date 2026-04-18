@@ -1,6 +1,6 @@
 # create-nextsheet-app
 
-Scaffold a new [NextSheet](https://github.com/ignaciorodrigues/nextsheet) workbook project in seconds.
+Scaffold a new [NextSheet](https://github.com/ignaciorodrigues1/nextsheet) workbook project in seconds.
 
 ## Usage
 

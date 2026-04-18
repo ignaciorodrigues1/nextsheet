@@ -118,7 +118,7 @@ The CLI uses **esbuild** to transpile `.sheet.tsx` files at runtime — no separ
 ## Related
 
 - [`nextsheet`](https://www.npmjs.com/package/nextsheet) — core library (components, hooks, adapters)
-- [GitHub](https://github.com/nextsheet/nextsheet) — source, examples, and RFCs
+- [GitHub](https://github.com/ignaciorodrigues1/nextsheet) — source, examples, and RFCs
 
 ## License
 
