@@ -41,11 +41,12 @@ function runProcess(cmd: string, args: string[], cwd: string): Promise<void> {
 function buildManifest(opts: ProjectOptions): Array<[string, string]> {
   const ext = opts.useTypeScript ? 'tsx' : 'jsx'
   const files: Array<[string, string]> = [
-    ['package.json',  t.packageJson(opts)],
-    ['.gitignore',    t.gitignore()],
-    ['.env.example',  t.envExample(opts)],
-    ['.env.local',    t.envLocal(opts)],
-    ['README.md',     t.readme(opts)],
+    ['package.json',          t.packageJson(opts)],
+    ['nextsheet.config.ts',   t.nextsheetConfig()],
+    ['.gitignore',            t.gitignore()],
+    ['.env.example',          t.envExample(opts)],
+    ['.env.local',            t.envLocal(opts)],
+    ['README.md',             t.readme(opts)],
   ]
 
   if (opts.useTypeScript) {

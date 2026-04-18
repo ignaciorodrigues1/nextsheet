@@ -50,8 +50,8 @@ importers:
         specifier: ^0.24.0
         version: 0.24.2
       nextsheet:
-        specifier: ^0.1.0
-        version: 0.1.4
+        specifier: workspace:*
+        version: link:../nextsheet
       picocolors:
         specifier: ^1.0.1
         version: 1.1.1
@@ -898,9 +898,6 @@ packages:
 
   mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
-
-  nextsheet@0.1.4:
-    resolution: {integrity: sha512-eDR3v2880a9AHDPwyUdUHwEVlMwHreN3EDvjzlfflSYLbJ3PkR1w4g7UhzoIqy6F6jKdLZh3tXKc+xJiKyauSg==}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -1777,10 +1774,6 @@ snapshots:
       any-promise: 1.3.0
       object-assign: 4.1.1
       thenify-all: 1.6.0
-
-  nextsheet@0.1.4:
-    dependencies:
-      exceljs: 4.4.0
 
   normalize-path@3.0.0: {}
 

@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import type { Command } from 'commander'
 import { log } from '../logger.js'
 import { loadWorkbook } from '../loader.js'
+import { loadConfig } from '../config-loader.js'
 import { renderWorkbookHTML } from '../preview/render.js'
 import type { WorkbookNode } from 'nextsheet'
 import { resolveBackend, backendOptions } from '../backends/resolve.js'
@@ -38,6 +39,7 @@ export function devCommand(program: Command): void {
     const port = parseInt(opts.port, 10)
     const absFiles = files.map((f) => resolve(process.cwd(), f))
     loadEnv('development')
+    await loadConfig()
     const backend: Backend | undefined = resolveBackend(opts)
     const pollMs = opts.poll ? parseInt(opts.poll, 10) : undefined
 
@@ -110,9 +112,12 @@ export function devCommand(program: Command): void {
     } catch { /* non-fatal */ }
 
     const { default: chokidar } = await import('chokidar')
-    const watcher = chokidar.watch(absFiles, { ignoreInitial: true })
-    watcher.on('change', (path) => {
+    const configFiles = ['nextsheet.config.ts', 'nextsheet.config.js', 'nextsheet.config.mts', 'nextsheet.config.mjs']
+      .map((f) => resolve(process.cwd(), f))
+    const watcher = chokidar.watch([...absFiles, ...configFiles], { ignoreInitial: true })
+    watcher.on('change', async (path) => {
       log.dim(`Changed: ${path}`)
+      if (configFiles.includes(path)) await loadConfig()
       void rebuild()
     })
     watcher.on('error', (err) => log.error(String(err)))

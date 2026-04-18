@@ -5,6 +5,7 @@ import type { Adapter, BuildTarget } from 'nextsheet'
 import { csvAdapter, xlsxAdapter, superSheetAdapter } from 'nextsheet'
 import { log } from '../logger.js'
 import { loadWorkbook } from '../loader.js'
+import { loadConfig } from '../config-loader.js'
 import { renderWorkbookHTML } from '../preview/render.js'
 import { resolveBackend, backendOptions } from '../backends/resolve.js'
 import { loadEnv } from '../env.js'
@@ -58,12 +59,15 @@ export function buildCommand(program: Command): void {
       const adapter = resolveAdapter(target)
 
       loadEnv('production')
+      await loadConfig()
       const backend = resolveBackend(opts)
       if (backend) log.dim(`Using backend: ${backend.name}`)
       log.info(`Building ${files.length} sheet(s) → ${target}`)
 
+      const formulaMode = target === 'xlsx' || target === 'supersheet'
+
       try {
-        const wb = await loadWorkbook(files, opts.name, backend)
+        const wb = await loadWorkbook(files, opts.name, backend, { formulaMode })
 
         let outPath: string
         let data: string | Buffer

@@ -74,7 +74,7 @@ export function tsconfigJson(): string {
         noImplicitReturns: true,
         skipLibCheck: true,
       },
-      include: ['sheets/**/*'],
+      include: ['sheets/**/*', 'nextsheet.config.ts'],
     },
     null,
     2
@@ -372,6 +372,49 @@ export default defineSheet('Sales', () => {
 
 export function exampleSheet(opts: ProjectOptions): string {
   return opts.useTypeScript ? exampleSheetTs() : exampleSheetJs()
+}
+
+// ─── nextsheet.config.ts ──────────────────────────────────────────────────────
+
+export function nextsheetConfig(): string {
+  return `import { defineConfig } from 'nextsheet'
+
+/**
+ * NextSheet theme configuration.
+ * Similar to tailwind.config.ts — customize colors, typography, and layout.
+ * Changes here apply to xlsx output and the HTML dev preview.
+ */
+export default defineConfig({
+  theme: {
+    colors: {
+      /** Header row background and chart accent color. */
+      primary: '#3b82f6',
+      /** Page / sheet background (HTML preview). */
+      background: '#ffffff',
+      /** Default cell text color. */
+      text: '#111827',
+      /** Text color on primary-colored header rows. */
+      headerText: '#ffffff',
+      /** Table and cell border color. */
+      border: '#e5e7eb',
+      /** Labels, subtitles, and dim text. */
+      muted: '#6b7280',
+    },
+    typography: {
+      /** Font family for cell content. Any system or web-safe font name. */
+      fontFamily: 'Inter',
+      /** Base font size in points (xlsx) or pixels (HTML preview). */
+      fontSize: 11,
+      /** Sheet title font size. */
+      headerFontSize: 16,
+    },
+    sheet: {
+      /** Default column width (characters in xlsx, proportional in HTML preview). */
+      columnWidth: 18,
+    },
+  },
+})
+`
 }
 
 // ─── README.md ────────────────────────────────────────────────────────────────

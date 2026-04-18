@@ -21,6 +21,25 @@ export {
   clearRangeCache,
 } from './runtime/range-context.js'
 
+// ─── Formula context (used by CLI for formula transpilation) ──────────────────
+export { enterFormulaMode, exitFormulaMode } from './formula/context.js'
+
+// ─── Formula helper functions ─────────────────────────────────────────────────
+export {
+  col,
+  SUM,
+  AVERAGE,
+  COUNT,
+  COUNTA,
+  COUNTIF,
+  SUMIF,
+  MIN,
+  MAX,
+  ROUND,
+  IF,
+  CONCATENATE,
+} from './formula/functions.js'
+
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 export { useFormula } from './hooks/useFormula.js'
 export { useQuery } from './hooks/useQuery.js'
@@ -31,6 +50,16 @@ export { CsvAdapter, csvAdapter } from './adapters/csv.js'
 export { XlsxAdapter, xlsxAdapter } from './adapters/xlsx.js'
 export { SuperSheetAdapter, superSheetAdapter } from './adapters/supersheet.js'
 export type { NextSheetOutput } from './adapters/supersheet.js'
+
+// ─── Config ──────────────────────────────────────────────────────────────────
+export { defineConfig, setActiveConfig, getActiveConfig } from './config.js'
+export type {
+  NextSheetConfig,
+  NextSheetTheme,
+  NextSheetColors,
+  NextSheetTypography,
+  NextSheetSheet,
+} from './config.js'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type {

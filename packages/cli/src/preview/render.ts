@@ -7,6 +7,7 @@ import type {
   SheetNode,
   WorkbookNode,
 } from 'nextsheet'
+import { getActiveConfig } from 'nextsheet'
 
 // ─── Cell value formatting ────────────────────────────────────────────────────
 
@@ -347,6 +348,37 @@ function renderSheet(sheet: SheetNode, sheetIdx = 0): string {
   return charts.length > 0 ? `${table}\n${charts}` : table
 }
 
+// ─── Theme CSS injection ──────────────────────────────────────────────────────
+
+function themeOverrideCSS(): string {
+  const { theme } = getActiveConfig()
+  if (theme === undefined) return ''
+
+  const vars: string[] = []
+  const { colors, typography } = theme
+
+  if (colors?.background !== undefined) vars.push(`--bg: ${colors.background}`)
+  if (colors?.text !== undefined)       vars.push(`--text: ${colors.text}`, `--accent: ${colors.text}`)
+  if (colors?.border !== undefined)     vars.push(`--border: ${colors.border}`)
+  if (colors?.muted !== undefined)      vars.push(`--muted: ${colors.muted}`)
+  if (colors?.primary !== undefined) {
+    vars.push(
+      `--th-bg: ${colors.primary}`,
+      `--header-bg: ${colors.primary}`,
+      `--col-header-text: ${colors.headerText ?? '#fff'}`,
+    )
+  }
+  if (typography?.fontFamily !== undefined) {
+    vars.push(`--font-ui: "${typography.fontFamily}", system-ui, sans-serif`)
+  }
+  if (typography?.fontSize !== undefined) {
+    vars.push(`--font-size: ${typography.fontSize}px`)
+  }
+
+  if (vars.length === 0) return ''
+  return `\n  <style>\n    :root {\n      ${vars.join(';\n      ')};\n    }\n  </style>`
+}
+
 // ─── Full page HTML ───────────────────────────────────────────────────────────
 
 export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
@@ -372,11 +404,12 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHTML(wb.name)} — NextSheet dev</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>${themeOverrideCSS()}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
+      --font-size: 13px;
       --bg:        #0f0f0f;
       --surface:   #1a1a1a;
       --border:    #2a2a2a;
@@ -390,10 +423,11 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
       --row-hover: #1e1e1e;
       --th-bg:     #1c1c1c;
       --section-bg:#161616;
-      --formula:   #7c9fff;
-      --radius:    6px;
-      --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace;
-      --font-ui:   -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --formula:          #7c9fff;
+      --radius:           6px;
+      --font-mono:        'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace;
+      --font-ui:          -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --col-header-text:  var(--text-dim);
     }
 
     @media (prefers-color-scheme: light) {
@@ -503,8 +537,8 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
     .sheet-table {
       border-collapse: collapse;
       width: 100%;
-      font-size: 13px;
-      font-family: var(--font-mono);
+      font-size: var(--font-size);
+      font-family: var(--font-ui);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -531,7 +565,7 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
 
     .col-header {
       background: var(--header-bg);
-      color: var(--text-dim);
+      color: var(--col-header-text);
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.05em;

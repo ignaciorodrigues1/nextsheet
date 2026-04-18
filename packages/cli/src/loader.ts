@@ -20,6 +20,8 @@ import {
   stopCollecting,
   populateCache,
   clearRangeCache,
+  enterFormulaMode,
+  exitFormulaMode,
 } from 'nextsheet'
 import type { Backend } from 'nextsheet/backends'
 
@@ -28,7 +30,8 @@ type SheetModule = {
 }
 
 // The CLI package has nextsheet in its own node_modules — use that for resolution.
-const CLI_DIR = new URL('../..', import.meta.url).pathname
+// new URL('..', import.meta.url) goes one level up from dist/index.js → packages/cli/
+const CLI_DIR = new URL('..', import.meta.url).pathname
 
 async function transpile(filePath: string): Promise<string> {
   const result = await build({
@@ -75,10 +78,16 @@ function resolveRenderer(mod: SheetModule['default'], label: string): Renderer {
   )
 }
 
+export interface LoadWorkbookOptions {
+  /** Activate formula transpilation (xlsx / spreadsheet targets). */
+  formulaMode?: boolean
+}
+
 export async function loadWorkbook(
   filePaths: string[],
   name = 'Workbook',
-  backend?: Backend
+  backend?: Backend,
+  opts: LoadWorkbookOptions = {}
 ): Promise<WorkbookNode> {
   const renderers: Renderer[] = []
   const cacheDir = join(process.cwd(), '.nextsheet', 'cache')
@@ -126,11 +135,32 @@ export async function loadWorkbook(
   // ── Phase 3: final render pass ────────────────────────────────────────────
   const sheets: SheetNode[] = []
   for (const render of renderers) {
-    const result = render()
-    if (result.kind === 'workbook') {
-      sheets.push(...(result as WorkbookNode).sheets)
+    if (opts.formulaMode) {
+      // Discovery render: get column names to build the formula address map.
+      const discovery = render()
+      if (discovery.kind === 'workbook') {
+        sheets.push(...(discovery as WorkbookNode).sheets)
+        continue
+      }
+      const discoverySheet = discovery as SheetNode
+      enterFormulaMode(discoverySheet.columns)
+      try {
+        const result = render()
+        if (result.kind === 'workbook') {
+          sheets.push(...(result as WorkbookNode).sheets)
+        } else {
+          sheets.push(result as SheetNode)
+        }
+      } finally {
+        exitFormulaMode()
+      }
     } else {
-      sheets.push(result as SheetNode)
+      const result = render()
+      if (result.kind === 'workbook') {
+        sheets.push(...(result as WorkbookNode).sheets)
+      } else {
+        sheets.push(result as SheetNode)
+      }
     }
   }
 
