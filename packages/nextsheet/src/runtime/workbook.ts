@@ -9,7 +9,7 @@ function isSheetDefinition(input: SheetInput): input is SheetDefinition {
 function resolveSheet(input: SheetInput): SheetNode {
   if (typeof input === 'function') return input()
   if (isSheetDefinition(input)) {
-    const node = input.render()
+    const node = input.render() as SheetNode
     // The definition name takes precedence over the Sheet component's default.
     return node.name === 'Sheet' ? { ...node, name: input.name } : node
   }

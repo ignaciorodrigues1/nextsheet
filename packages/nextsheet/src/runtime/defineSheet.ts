@@ -11,6 +11,6 @@ import type { SheetDefinition, SheetNode } from '../types.js'
  *   </Sheet>
  * ))
  */
-export function defineSheet(name: string, render: () => SheetNode): SheetDefinition {
+export function defineSheet(name: string, render: () => unknown): SheetDefinition {
   return { _type: 'SheetDefinition', name, render }
 }

@@ -63,7 +63,7 @@ function resolveRenderer(mod: SheetModule['default'], label: string): Renderer {
   if ('_type' in mod && (mod as SheetDefinition)._type === 'SheetDefinition') {
     const def = mod as SheetDefinition
     return () => {
-      const node = def.render()
+      const node = def.render() as SheetNode
       return node.name === 'Sheet' ? { ...node, name: def.name } : node
     }
   }

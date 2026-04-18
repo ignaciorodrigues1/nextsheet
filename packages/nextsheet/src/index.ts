@@ -1,5 +1,6 @@
 // ─── Components ───────────────────────────────────────────────────────────────
 export { Cell } from './components/Cell.js'
+export { Paginate } from './components/Paginate.js'
 export { Chart } from './components/Chart.js'
 export { ChartSeries } from './components/ChartSeries.js'
 export { Column } from './components/Column.js'
@@ -61,37 +62,81 @@ export type {
   NextSheetSheet,
 } from './config.js'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types — core ─────────────────────────────────────────────────────────────
 export type {
+  // nodes
+  CellColor,
+  CellNode,
+  ChartNode,
+  ChartPoint,
+  ChartSeriesNode,
+  ChartType,
+  ColumnNode,
+  ColumnType,
+  FormulaNode,
+  HeaderNode,
+  PaginateNode,
+  RowNode,
+  SectionNode,
+  SheetChild,
+  SheetNode,
+  SheetTheme,
+  WorkbookNode,
+  // component props
+  CellProps,
+  ChartProps,
+  ChartSeriesProps,
+  ColumnProps,
+  ColumnRefs,
+  FormulaProps,
+  HeaderProps,
+  NxtChildren,
+  PaginateProps,
+  RowProps,
+  SectionProps,
+  SheetDefinition,
+  SheetProps,
+  // hooks
+  FilterOperator,
+  RangeQuery,
+  SortDirection,
+  UseRangeOptions,
+  // adapters
   Adapter,
   BuildOptions,
   BuildTarget,
-  CellColor,
-  CellNode,
-  CellProps,
-  ChartNode,
-  ChartPoint,
-  ChartProps,
-  ChartSeriesNode,
-  ChartSeriesProps,
-  ChartType,
-  ColumnNode,
-  ColumnProps,
-  ColumnRefs,
-  ColumnType,
-  FormulaNode,
-  FormulaProps,
-  HeaderNode,
-  HeaderProps,
-  RangeQuery,
   RenderResult,
-  RowNode,
-  RowProps,
-  SectionNode,
-  SectionProps,
-  SheetDefinition,
-  SheetNode,
-  SheetProps,
-  SheetTheme,
-  WorkbookNode,
-} from './types.js'
+} from './types/index.js'
+
+// ─── Types — enterprise ───────────────────────────────────────────────────────
+export type {
+  AuditAction,
+  AuditEntry,
+  AuditFilter,
+  AuditLog,
+  BuildMetrics,
+  BuildVersion,
+  ConnectorConfig,
+  ConnectorFetchOptions,
+  CronExpression,
+  DataConnector,
+  Delivery,
+  DeliveryChannel,
+  EmailDelivery,
+  GraphQLConnectorConfig,
+  HealthStatus,
+  IdentityToken,
+  Permission,
+  PermissionCheck,
+  RestConnectorConfig,
+  Role,
+  RoleBinding,
+  ScheduledBuild,
+  ScheduledJobStatus,
+  SlackDelivery,
+  SqlConnectorConfig,
+  SsoConfig,
+  SsoProvider,
+  VersionStore,
+  WebhookDelivery,
+} from './types/enterprise.js'

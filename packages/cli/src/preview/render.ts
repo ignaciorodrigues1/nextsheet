@@ -2,6 +2,7 @@ import type {
   CellNode,
   ChartNode,
   ColumnNode,
+  PaginateNode,
   RowNode,
   SectionNode,
   SheetNode,
@@ -109,26 +110,39 @@ function renderCell(
   return `<${tag} class="${cls}"${colspan}${styleAttr}>${value}</${tag}>`
 }
 
-function renderRow(row: RowNode, columns: ColumnNode[], colCount: number): string {
+function renderRow(row: RowNode, columns: ColumnNode[], colCount: number, rowIdx?: number): string {
   const tag = row.header === true ? 'th' : 'td'
   const cls = row.header === true ? 'row-header' : ''
   const cells = row.cells.map((cell, i) => renderCell(cell, columns[i], tag === 'th' ? 'th' : 'td', cls))
-  // Pad to column count so the grid stays aligned
   while (cells.length < colCount) cells.push('<td class="td"></td>')
-  return `<tr>${cells.join('')}</tr>`
+  const dataAttr = rowIdx !== undefined && row.header !== true ? ` data-nxt-row="${rowIdx}"` : ''
+  return `<tr${dataAttr}>${cells.join('')}</tr>`
 }
 
-function renderSection(section: SectionNode, columns: ColumnNode[], colCount: number): string {
+function renderSection(
+  section: SectionNode,
+  columns: ColumnNode[],
+  colCount: number,
+  startRowIdx: number,
+  paginated: boolean,
+): { html: string; rowCount: number } {
   const rows: string[] = []
+  let dataRowCount = 0
+
   if (section.title !== undefined) {
+    const sectionAttr = paginated ? ` data-nxt-section-start="${startRowIdx}"` : ''
     rows.push(
-      `<tr><td class="section-title" colspan="${Math.max(colCount, 1)}">${escapeHTML(section.title)}</td></tr>`
+      `<tr${sectionAttr}><td class="section-title" colspan="${Math.max(colCount, 1)}">${escapeHTML(section.title)}</td></tr>`
     )
   }
+
   for (const row of section.rows) {
-    rows.push(renderRow(row, columns, colCount))
+    const idx = row.header === true ? undefined : (paginated ? startRowIdx + dataRowCount : undefined)
+    rows.push(renderRow(row, columns, colCount, idx))
+    if (row.header !== true) dataRowCount++
   }
-  return rows.join('\n')
+
+  return { html: rows.join('\n'), rowCount: dataRowCount }
 }
 
 // ─── Chart rendering ──────────────────────────────────────────────────────────
@@ -296,9 +310,23 @@ function renderChart(chart: ChartNode, sheet: SheetNode, sheetIdx: number, chart
 </script>`
 }
 
+function renderPaginator(sheetIdx: number, pagination: PaginateNode, totalRows: number): string {
+  const { pageSize, initialPage = 1 } = pagination
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
+  const id = `pager-${sheetIdx}`
+  return `
+<div class="paginator" id="${id}" data-sheet="${sheetIdx}" data-page-size="${pageSize}" data-total-rows="${totalRows}" data-current-page="${initialPage}">
+  <button class="pager-btn" id="${id}-prev" onclick="nxtPagerPrev(${sheetIdx})" aria-label="Previous page">&#8592; Prev</button>
+  <span class="pager-info" id="${id}-info">Page ${initialPage} of ${totalPages}</span>
+  <button class="pager-btn" id="${id}-next" onclick="nxtPagerNext(${sheetIdx})" aria-label="Next page">Next &#8594;</button>
+  <span class="pager-count" id="${id}-count">${totalRows.toLocaleString()} rows</span>
+</div>`
+}
+
 function renderSheet(sheet: SheetNode, sheetIdx = 0): string {
   const rows: string[] = []
   const columns = sheet.columns
+  const paginated = sheet.pagination !== undefined
   const colCount = Math.max(
     columns.length,
     ...sheet.sections.flatMap((s) => s.rows.map((r) => r.cells.length)),
@@ -328,24 +356,37 @@ function renderSheet(sheet: SheetNode, sheetIdx = 0): string {
     rows.push(`<tr>${headers.join('')}</tr>`)
   }
 
-  // Sections
+  // Sections — track running row index for pagination
+  let dataRowIdx = 0
   for (const section of sheet.sections) {
-    rows.push(renderSection(section, columns, colCount))
+    const { html, rowCount } = renderSection(section, columns, colCount, dataRowIdx, paginated)
+    rows.push(html)
+    dataRowIdx += rowCount
   }
 
   // Direct rows
   for (const row of sheet.rows) {
-    rows.push(renderRow(row, columns, colCount))
+    const idx = row.header !== true && paginated ? dataRowIdx : undefined
+    rows.push(renderRow(row, columns, colCount, idx))
+    if (row.header !== true) dataRowIdx++
   }
 
-  const table = `<table class="sheet-table"><tbody>${rows.join('\n')}</tbody></table>`
+  const totalRows = dataRowIdx
+  const tableId = `table-${sheetIdx}`
+  const table = `<table class="sheet-table" id="${tableId}"><tbody>${rows.join('\n')}</tbody></table>`
+
+  // Paginator controls
+  const paginatorHtml = paginated && sheet.pagination !== undefined
+    ? renderPaginator(sheetIdx, sheet.pagination, totalRows)
+    : ''
 
   // Charts
   const charts = sheet.charts
     .map((chart, chartIdx) => renderChart(chart, sheet, sheetIdx, chartIdx))
     .join('\n')
 
-  return charts.length > 0 ? `${table}\n${charts}` : table
+  const parts = [table, paginatorHtml, charts].filter(Boolean)
+  return parts.join('\n')
 }
 
 // ─── Theme CSS injection ──────────────────────────────────────────────────────
@@ -642,6 +683,49 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
       font-size: 13px;
     }
 
+    /* ── Paginator ───────────────────────────────────────────────── */
+    .paginator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 8px 4px;
+      font-size: 12px;
+      font-family: var(--font-ui);
+      color: var(--text-dim);
+    }
+    .pager-btn {
+      padding: 5px 14px;
+      font-size: 12px;
+      font-family: var(--font-ui);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .pager-btn:hover:not(:disabled) {
+      background: var(--th-bg);
+      border-color: var(--muted);
+    }
+    .pager-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .pager-info {
+      font-weight: 600;
+      color: var(--text);
+      min-width: 90px;
+      text-align: center;
+    }
+    .pager-count {
+      margin-left: auto;
+      color: var(--text-dim);
+      font-size: 11px;
+      font-family: var(--font-mono);
+    }
+
     /* ── Error toast ─────────────────────────────────────────────── */
     #error-bar {
       display: none;
@@ -680,6 +764,71 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
   </div>
 
   <div id="error-bar"></div>
+
+  <script>
+    // ── Pagination ──────────────────────────────────────────────────
+    function nxtApplyPage(sheetIdx, page) {
+      var id = 'pager-' + sheetIdx
+      var pager = document.getElementById(id)
+      if (!pager) return
+
+      var pageSize  = parseInt(pager.dataset.pageSize, 10)
+      var totalRows = parseInt(pager.dataset.totalRows, 10)
+      var totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
+      page = Math.max(1, Math.min(page, totalPages))
+      pager.dataset.currentPage = String(page)
+
+      var start = (page - 1) * pageSize
+      var end   = start + pageSize
+
+      // Show/hide data rows
+      var panel = document.getElementById('panel-' + sheetIdx)
+      if (!panel) return
+
+      panel.querySelectorAll('tr[data-nxt-row]').forEach(function(tr) {
+        var idx = parseInt(tr.dataset.nxtRow, 10)
+        tr.style.display = (idx >= start && idx < end) ? '' : 'none'
+      })
+
+      // Show/hide section titles: visible if any row in the section is visible
+      panel.querySelectorAll('tr[data-nxt-section-start]').forEach(function(tr) {
+        var secStart = parseInt(tr.dataset.nxtSectionStart, 10)
+        // Find next section-start index
+        var allSections = Array.from(panel.querySelectorAll('tr[data-nxt-section-start]'))
+        var myIdx = allSections.indexOf(tr)
+        var nextSec = allSections[myIdx + 1]
+        var secEnd = nextSec ? parseInt(nextSec.dataset.nxtSectionStart, 10) : totalRows
+        var sectionVisible = (secStart < end) && (secEnd > start)
+        tr.style.display = sectionVisible ? '' : 'none'
+      })
+
+      // Update controls
+      document.getElementById(id + '-info').textContent = 'Page ' + page + ' of ' + totalPages
+      document.getElementById(id + '-prev').disabled = page <= 1
+      document.getElementById(id + '-next').disabled = page >= totalPages
+    }
+
+    function nxtPagerPrev(sheetIdx) {
+      var pager = document.getElementById('pager-' + sheetIdx)
+      if (!pager) return
+      nxtApplyPage(sheetIdx, parseInt(pager.dataset.currentPage, 10) - 1)
+    }
+
+    function nxtPagerNext(sheetIdx) {
+      var pager = document.getElementById('pager-' + sheetIdx)
+      if (!pager) return
+      nxtApplyPage(sheetIdx, parseInt(pager.dataset.currentPage, 10) + 1)
+    }
+
+    // Initialize all paginators on load
+    ;(function() {
+      document.querySelectorAll('.paginator').forEach(function(pager) {
+        var sheetIdx = parseInt(pager.dataset.sheet, 10)
+        var initialPage = parseInt(pager.dataset.currentPage, 10)
+        nxtApplyPage(sheetIdx, initialPage)
+      })
+    })()
+  </script>
 
   <script>
     // ── Tab navigation with localStorage persistence ────────────────

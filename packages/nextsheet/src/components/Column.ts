@@ -1,4 +1,4 @@
-import type { ColumnNode, ColumnProps, ColumnType } from '../types.js'
+import type { ColumnNode, ColumnProps, ColumnType, FormulaNode } from '../types.js'
 
 export function Column<T extends ColumnType = ColumnType>({
   name,
@@ -18,7 +18,7 @@ export function Column<T extends ColumnType = ColumnType>({
     const colProxy = new Proxy({} as Record<string, string>, {
       get: (_, prop) => String(prop),
     })
-    const formulaNode = formula(colProxy)
+    const formulaNode = formula(colProxy) as FormulaNode
     resolvedFormula = formulaNode.expression
   }
 

@@ -2,11 +2,12 @@ import type {
   ChartNode,
   ColumnNode,
   HeaderNode,
+  PaginateNode,
   RowNode,
   SectionNode,
   SheetNode,
   SheetProps,
-} from '../types.js'
+} from '../types/index.js'
 
 function isColumnNode(v: unknown): v is ColumnNode {
   return typeof v === 'object' && v !== null && (v as ColumnNode).kind === 'column'
@@ -23,6 +24,9 @@ function isHeaderNode(v: unknown): v is HeaderNode {
 function isChartNode(v: unknown): v is ChartNode {
   return typeof v === 'object' && v !== null && (v as ChartNode).kind === 'chart'
 }
+function isPaginateNode(v: unknown): v is PaginateNode {
+  return typeof v === 'object' && v !== null && (v as PaginateNode).kind === 'paginate'
+}
 
 export function Sheet({ name = 'Sheet', theme, children }: SheetProps): SheetNode {
   const raw = Array.isArray(children) ? children : children !== undefined ? [children] : []
@@ -31,9 +35,9 @@ export function Sheet({ name = 'Sheet', theme, children }: SheetProps): SheetNod
   const header = flat.find(isHeaderNode)
   const columns = flat.filter(isColumnNode)
   const sections = flat.filter(isSectionNode)
-  // Rows placed directly under Sheet become an implicit unnamed section
   const directRows = flat.filter(isRowNode)
   const charts = flat.filter(isChartNode)
+  const paginate = flat.find(isPaginateNode)
 
   return {
     kind: 'sheet',
@@ -44,5 +48,6 @@ export function Sheet({ name = 'Sheet', theme, children }: SheetProps): SheetNod
     sections,
     rows: directRows,
     charts,
+    ...(paginate !== undefined && { pagination: paginate }),
   }
 }

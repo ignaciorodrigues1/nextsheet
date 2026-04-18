@@ -1,4 +1,5 @@
 export { Cell } from './Cell.js'
+export { Paginate } from './Paginate.js'
 export { Chart } from './Chart.js'
 export { ChartSeries } from './ChartSeries.js'
 export { Column } from './Column.js'
