@@ -47,7 +47,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepack": "rm -rf dist && tsup"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

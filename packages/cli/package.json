@@ -1,6 +1,6 @@
 {
   "name": "nextsheet-cli",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "NextSheet CLI — build, dev, and deploy spreadsheet apps.",
   "license": "MIT",
   "type": "module",
@@ -20,7 +20,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepack": "rm -rf dist && tsup"
   },
   "dependencies": {
     "nextsheet": "workspace:*",

@@ -25,6 +25,19 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  examples/personal-finance:
+    dependencies:
+      nextsheet:
+        specifier: workspace:*
+        version: link:../../packages/nextsheet
+      nextsheet-cli:
+        specifier: workspace:*
+        version: link:../../packages/cli
+    devDependencies:
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
   examples/quarterly-report:
     dependencies:
       nextsheet:
