@@ -1,4 +1,4 @@
-import type { CellNode, RenderResult, RowNode, SectionNode, SheetNode, WorkbookNode } from '../types.js'
+import type { CellNode, RenderResult, RowNode, SectionNode, SheetNode, WorkbookNode } from '../types/index.js'
 import { BaseAdapter } from './base.js'
 
 function escapeCell(value: unknown): string {

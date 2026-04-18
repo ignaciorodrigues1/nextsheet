@@ -15,7 +15,7 @@ import type {
   SectionNode,
   SheetNode,
   WorkbookNode,
-} from '../types.js'
+} from '../types/index.js'
 import { BaseAdapter } from './base.js'
 
 // ─── SuperSheet internal types (mirrored here to stay self-contained) ─────────

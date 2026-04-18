@@ -99,6 +99,7 @@ function renderCell(
   extraClass = ''
 ): string {
   const style  = cellStyle(cell, col)
+  const rawVal = String(cell.value ?? '')
   const value  = cell.formula !== undefined
     ? `<span class="formula" title="formula: ${escapeHTML(cell.formula)}">=${escapeHTML(cell.formula)}</span>`
     : escapeHTML(formatValue(cell, col))
@@ -107,7 +108,18 @@ function renderCell(
     : ''
   const cls = [tag === 'th' ? 'th' : 'td', extraClass].filter(Boolean).join(' ')
   const styleAttr = style ? ` style="${style}"` : ''
-  return `<${tag} class="${cls}"${colspan}${styleAttr}>${value}</${tag}>`
+
+  // Cells in columns with options get data-attrs for cross-sheet filtering
+  const filterAttrs = (tag === 'td' && col?.options !== undefined)
+    ? ` data-nxt-col="${escapeHTML(col.name)}" data-nxt-val="${escapeHTML(rawVal)}"`
+    : ''
+
+  // If the column has options, render value as a colored badge
+  const displayValue = (tag === 'td' && col?.options !== undefined && rawVal !== '')
+    ? `<span class="opt-badge">${value}</span>`
+    : value
+
+  return `<${tag} class="${cls}"${colspan}${styleAttr}${filterAttrs}>${displayValue}</${tag}>`
 }
 
 function renderRow(row: RowNode, columns: ColumnNode[], colCount: number, rowIdx?: number): string {
@@ -310,6 +322,22 @@ function renderChart(chart: ChartNode, sheet: SheetNode, sheetIdx: number, chart
 </script>`
 }
 
+function renderFilterBar(columns: ColumnNode[], sheetIdx: number): string {
+  const filterCols = columns.filter(c => c.options && c.options.length > 0)
+  if (filterCols.length === 0) return ''
+
+  const selects = filterCols.map(col => `
+    <div class="filter-item">
+      <label class="filter-label">${escapeHTML(col.name)}</label>
+      <select class="filter-select" data-filter-col="${escapeHTML(col.name)}" onchange="nxtFilterChange('${escapeHTML(col.name)}', this.value)">
+        <option value="">All</option>
+        ${col.options!.map(opt => `<option value="${escapeHTML(opt)}">${escapeHTML(opt)}</option>`).join('')}
+      </select>
+    </div>`).join('')
+
+  return `<div class="filter-bar" id="filter-bar-${sheetIdx}">\n  <span class="filter-icon">⊟</span>\n  ${selects}\n  <button class="filter-clear" onclick="nxtFilterClear()">Clear filters</button>\n</div>`
+}
+
 function renderPaginator(sheetIdx: number, pagination: PaginateNode, totalRows: number): string {
   const { pageSize, initialPage = 1 } = pagination
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
@@ -373,6 +401,7 @@ function renderSheet(sheet: SheetNode, sheetIdx = 0): string {
 
   const totalRows = dataRowIdx
   const tableId = `table-${sheetIdx}`
+  const filterBar    = renderFilterBar(columns, sheetIdx)
   const table = `<table class="sheet-table" id="${tableId}"><tbody>${rows.join('\n')}</tbody></table>`
 
   // Paginator controls
@@ -385,7 +414,7 @@ function renderSheet(sheet: SheetNode, sheetIdx = 0): string {
     .map((chart, chartIdx) => renderChart(chart, sheet, sheetIdx, chartIdx))
     .join('\n')
 
-  const parts = [table, paginatorHtml, charts].filter(Boolean)
+  const parts = [filterBar, table, paginatorHtml, charts].filter(Boolean)
   return parts.join('\n')
 }
 
@@ -683,6 +712,82 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
       font-size: 13px;
     }
 
+    /* ── Filter bar ──────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-family: var(--font-ui);
+    }
+    .filter-icon { color: var(--muted); font-size: 14px; }
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .filter-select {
+      padding: 4px 24px 4px 8px;
+      font-size: 12px;
+      font-family: var(--font-ui);
+      background: var(--th-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      cursor: pointer;
+      appearance: auto;
+      min-width: 100px;
+      transition: border-color 0.1s;
+    }
+    .filter-select:focus { outline: none; border-color: #0f766e; }
+    .filter-select.active { border-color: #0f766e; background: #0f766e18; color: #0f766e; font-weight: 600; }
+    .filter-clear {
+      margin-left: auto;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-family: var(--font-ui);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+    .filter-clear:hover { border-color: var(--muted); color: var(--text); }
+    .filter-active-count {
+      font-size: 11px;
+      font-weight: 600;
+      color: #0f766e;
+      background: #0f766e18;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* ── Option badges ───────────────────────────────────────────── */
+    .opt-badge {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--th-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
     /* ── Paginator ───────────────────────────────────────────────── */
     .paginator {
       display: flex;
@@ -766,6 +871,120 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
   <div id="error-bar"></div>
 
   <script>
+    // ── Cross-sheet filter ──────────────────────────────────────────
+    // Filters are stored in sessionStorage and applied to ALL sheets simultaneously.
+    // Any row with a data-nxt-col attribute matching an active filter gets shown/hidden.
+
+    var _nxtFilters = {}
+
+    function nxtFilterChange(colName, value) {
+      _nxtFilters[colName] = value
+      _nxtSaveFilters()
+      _nxtApplyFilters()
+      _nxtUpdateFilterUI()
+    }
+
+    function nxtFilterClear() {
+      _nxtFilters = {}
+      _nxtSaveFilters()
+      _nxtApplyFilters()
+      _nxtUpdateFilterUI()
+    }
+
+    function _nxtSaveFilters() {
+      try { sessionStorage.setItem('nxt:filters', JSON.stringify(_nxtFilters)) } catch(e) {}
+    }
+
+    function _nxtLoadFilters() {
+      try { _nxtFilters = JSON.parse(sessionStorage.getItem('nxt:filters') || '{}') } catch(e) {}
+    }
+
+    function _nxtApplyFilters() {
+      var activeEntries = Object.entries(_nxtFilters).filter(function(e) { return e[1] !== '' })
+
+      // Apply to every panel (cross-sheet)
+      document.querySelectorAll('.panel').forEach(function(panel) {
+        panel.querySelectorAll('tr[data-nxt-row]').forEach(function(tr) {
+          if (activeEntries.length === 0) {
+            tr.dataset.filterHidden = '0'
+          } else {
+            var match = activeEntries.every(function(entry) {
+              var col = entry[0], val = entry[1]
+              var cell = tr.querySelector('[data-nxt-col="' + col + '"]')
+              if (!cell) return true // column not present in this sheet → don't filter
+              return cell.dataset.nxtVal === val
+            })
+            tr.dataset.filterHidden = match ? '0' : '1'
+          }
+          // Reconcile with pagination: only show if BOTH filter and page allow it
+          _nxtReconcileRow(tr)
+        })
+
+        // Show/hide section titles: visible if any row in section is visible
+        _nxtUpdateSectionVisibility(panel)
+      })
+
+      // Update row count badge in filter bar
+      document.querySelectorAll('.filter-bar').forEach(function(bar) {
+        var panel = bar.closest('.panel') || document.querySelector('.panel.active')
+        if (!panel) return
+        var visible = panel.querySelectorAll('tr[data-nxt-row]:not([style*="display: none"])').length
+        var total   = panel.querySelectorAll('tr[data-nxt-row]').length
+        var badge   = bar.querySelector('.filter-active-count')
+        if (activeEntries.length > 0) {
+          if (!badge) {
+            badge = document.createElement('span')
+            badge.className = 'filter-active-count'
+            bar.appendChild(badge)
+          }
+          badge.textContent = visible + ' / ' + total + ' rows'
+        } else if (badge) {
+          badge.remove()
+        }
+      })
+    }
+
+    function _nxtReconcileRow(tr) {
+      var filterHidden = tr.dataset.filterHidden === '1'
+      var pageHidden   = tr.dataset.pageHidden   === '1'
+      tr.style.display = (filterHidden || pageHidden) ? 'none' : ''
+    }
+
+    function _nxtUpdateSectionVisibility(panel) {
+      var allRows = Array.from(panel.querySelectorAll('tr[data-nxt-row]'))
+      panel.querySelectorAll('tr[data-nxt-section-start]').forEach(function(secTr) {
+        var secStart = parseInt(secTr.dataset.nxtSectionStart, 10)
+        var allSecs  = Array.from(panel.querySelectorAll('tr[data-nxt-section-start]'))
+        var myIdx    = allSecs.indexOf(secTr)
+        var nextSec  = allSecs[myIdx + 1]
+        var secEnd   = nextSec ? parseInt(nextSec.dataset.nxtSectionStart, 10) : Infinity
+        var anyVisible = allRows.some(function(r) {
+          var idx = parseInt(r.dataset.nxtRow, 10)
+          return idx >= secStart && idx < secEnd && r.style.display !== 'none'
+        })
+        secTr.style.display = anyVisible ? '' : 'none'
+      })
+    }
+
+    function _nxtUpdateFilterUI() {
+      document.querySelectorAll('.filter-select').forEach(function(sel) {
+        var col = sel.dataset.filterCol
+        var active = _nxtFilters[col] && _nxtFilters[col] !== ''
+        sel.classList.toggle('active', !!active)
+        if (active) sel.value = _nxtFilters[col]
+        else sel.value = ''
+      })
+    }
+
+    // Init: restore persisted filters on load
+    ;(function() {
+      _nxtLoadFilters()
+      _nxtApplyFilters()
+      _nxtUpdateFilterUI()
+    })()
+  </script>
+
+  <script>
     // ── Pagination ──────────────────────────────────────────────────
     function nxtApplyPage(sheetIdx, page) {
       var id = 'pager-' + sheetIdx
@@ -781,26 +1000,17 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
       var start = (page - 1) * pageSize
       var end   = start + pageSize
 
-      // Show/hide data rows
+      // Show/hide data rows — use data-pageHidden so filter reconciliation works
       var panel = document.getElementById('panel-' + sheetIdx)
       if (!panel) return
 
       panel.querySelectorAll('tr[data-nxt-row]').forEach(function(tr) {
         var idx = parseInt(tr.dataset.nxtRow, 10)
-        tr.style.display = (idx >= start && idx < end) ? '' : 'none'
+        tr.dataset.pageHidden = (idx >= start && idx < end) ? '0' : '1'
+        _nxtReconcileRow(tr)
       })
 
-      // Show/hide section titles: visible if any row in the section is visible
-      panel.querySelectorAll('tr[data-nxt-section-start]').forEach(function(tr) {
-        var secStart = parseInt(tr.dataset.nxtSectionStart, 10)
-        // Find next section-start index
-        var allSections = Array.from(panel.querySelectorAll('tr[data-nxt-section-start]'))
-        var myIdx = allSections.indexOf(tr)
-        var nextSec = allSections[myIdx + 1]
-        var secEnd = nextSec ? parseInt(nextSec.dataset.nxtSectionStart, 10) : totalRows
-        var sectionVisible = (secStart < end) && (secEnd > start)
-        tr.style.display = sectionVisible ? '' : 'none'
-      })
+      _nxtUpdateSectionVisibility(panel)
 
       // Update controls
       document.getElementById(id + '-info').textContent = 'Page ' + page + ' of ' + totalPages

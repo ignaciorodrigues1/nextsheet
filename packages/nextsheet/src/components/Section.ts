@@ -1,4 +1,4 @@
-import type { RowNode, SectionNode, SectionProps } from '../types.js'
+import type { RowNode, SectionNode, SectionProps } from '../types/index.js'
 
 function isRowNode(v: unknown): v is RowNode {
   return typeof v === 'object' && v !== null && (v as RowNode).kind === 'row'

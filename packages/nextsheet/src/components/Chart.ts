@@ -1,4 +1,4 @@
-import type { ChartNode, ChartProps, ChartSeriesNode } from '../types.js'
+import type { ChartNode, ChartProps, ChartSeriesNode } from '../types/index.js'
 
 function isChartSeriesNode(v: unknown): v is ChartSeriesNode {
   return typeof v === 'object' && v !== null && (v as ChartSeriesNode).kind === 'chart-series'

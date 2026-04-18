@@ -2,7 +2,7 @@
 // module instances (the CLI imports nextsheet directly; transpiled sheet files bundle
 // it inline). Both copies read/write the same globalThis key.
 
-import type { ColumnNode } from '../types.js'
+import type { ColumnNode } from '../types/index.js'
 
 interface FormulaCtx {
   active: boolean

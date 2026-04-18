@@ -78,6 +78,21 @@ export interface ColumnProps<T extends ColumnType = ColumnType> {
   readonly currency?: string
   /** Custom number format string (xlsx format codes, e.g. `"#,##0.00"`). */
   readonly format?: string
+  /**
+   * Allowed values for this column.
+   *
+   * - **HTML preview** — generates a filter bar above the sheet with a `<select>` per
+   *   column. Selecting a value filters ALL sheets that share the same column name,
+   *   enabling cross-sheet filtering from a single control.
+   * - **xlsx** — creates Excel data-validation (dropdown list) on every cell in the column.
+   *
+   * @example
+   * ```tsx
+   * <Column name="naturaleza"    type="string" options={['Personal', 'Empresa']} />
+   * <Column name="clasificacion" type="string" options={['Gasto', 'Ingreso', 'Ahorro']} />
+   * ```
+   */
+  readonly options?: readonly string[]
 }
 
 // ─── <Section> ────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@
  * formula translation and rich styling ship in v0.2.
  */
 
-import type { CellNode, ColumnNode, RenderResult, RowNode, SheetNode, WorkbookNode } from '../types.js'
+import type { CellNode, ColumnNode, RenderResult, RowNode, SheetNode, WorkbookNode } from '../types/index.js'
 import { getActiveConfig, type NextSheetTheme } from '../config.js'
 import { BaseAdapter } from './base.js'
 

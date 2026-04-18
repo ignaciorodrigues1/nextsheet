@@ -12,7 +12,7 @@
  * const total = useFormula(() => SUM(col('amount')))
  */
 
-import type { FormulaNode } from '../types.js'
+import type { FormulaNode } from '../types/index.js'
 import { isFormulaMode } from '../formula/context.js'
 import { isFormulaRef } from '../formula/ref.js'
 

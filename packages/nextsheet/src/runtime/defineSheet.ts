@@ -1,4 +1,4 @@
-import type { SheetDefinition, SheetNode } from '../types.js'
+import type { SheetDefinition, SheetNode } from '../types/index.js'
 
 /**
  * Marks a render function as a named sheet definition.

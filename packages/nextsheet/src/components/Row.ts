@@ -1,4 +1,4 @@
-import type { CellNode, RowNode, RowProps } from '../types.js'
+import type { CellNode, RowNode, RowProps } from '../types/index.js'
 
 function isCellNode(v: unknown): v is CellNode {
   return typeof v === 'object' && v !== null && (v as CellNode).kind === 'cell'

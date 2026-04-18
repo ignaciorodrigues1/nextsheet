@@ -1,0 +1,20 @@
+{
+  "name": "@nextsheet/example-personal-finance",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nextsheet dev sheets/*.sheet.tsx",
+    "build": "npm run build:csv && npm run build:xlsx && npm run build:html",
+    "build:csv": "nextsheet build sheets/*.sheet.tsx --target csv --out dist/workbook.csv",
+    "build:xlsx": "nextsheet build sheets/*.sheet.tsx --target xlsx --out dist/workbook.xlsx",
+    "build:html": "nextsheet build sheets/*.sheet.tsx --target html --out dist/index.html"
+  },
+  "dependencies": {
+    "nextsheet": "workspace:*",
+    "nextsheet-cli": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

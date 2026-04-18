@@ -1,4 +1,4 @@
-import type { RangeQuery } from '../types.js'
+import type { RangeQuery } from '../types/index.js'
 
 class QueryImpl<T> implements RangeQuery<T> {
   constructor(private data: T[]) {}

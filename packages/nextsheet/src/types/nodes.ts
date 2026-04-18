@@ -104,6 +104,8 @@ export interface ColumnNode {
   readonly formula?: string
   readonly currency?: string
   readonly format?: string
+  /** Valid values for this column. Renders as a filter dropdown in the HTML preview and data-validation in xlsx. */
+  readonly options?: readonly string[]
 }
 
 export interface PaginateNode {

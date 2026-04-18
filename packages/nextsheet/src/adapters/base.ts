@@ -1,4 +1,4 @@
-import type { Adapter, RenderResult, WorkbookNode } from '../types.js'
+import type { Adapter, RenderResult, WorkbookNode } from '../types/index.js'
 
 export abstract class BaseAdapter implements Adapter {
   abstract readonly name: string

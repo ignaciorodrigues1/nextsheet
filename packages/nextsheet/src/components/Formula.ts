@@ -1,4 +1,4 @@
-import type { FormulaNode, FormulaProps } from '../types.js'
+import type { FormulaNode, FormulaProps } from '../types/index.js'
 
 export function Formula({ children }: FormulaProps): FormulaNode {
   const expression =

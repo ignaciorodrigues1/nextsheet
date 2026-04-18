@@ -1,4 +1,4 @@
-import type { ColumnNode, ColumnProps, ColumnType, FormulaNode } from '../types.js'
+import type { ColumnNode, ColumnProps, ColumnType, FormulaNode } from '../types/index.js'
 
 export function Column<T extends ColumnType = ColumnType>({
   name,
@@ -9,12 +9,11 @@ export function Column<T extends ColumnType = ColumnType>({
   formula,
   currency,
   format,
+  options,
 }: ColumnProps<T>): ColumnNode {
   let resolvedFormula: string | undefined
 
   if (formula !== undefined) {
-    // Build a proxy so each column-name ref stringifies to its own name.
-    // Adapters later map column names → actual cell addresses.
     const colProxy = new Proxy({} as Record<string, string>, {
       get: (_, prop) => String(prop),
     })
@@ -32,5 +31,6 @@ export function Column<T extends ColumnType = ColumnType>({
     ...(resolvedFormula !== undefined && { formula: resolvedFormula }),
     ...(currency !== undefined && { currency }),
     ...(format !== undefined && { format }),
+    ...(options !== undefined && { options }),
   }
 }

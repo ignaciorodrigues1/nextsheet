@@ -1,4 +1,4 @@
-import type { CellNode, CellProps, FormulaNode } from '../types.js'
+import type { CellNode, CellProps, FormulaNode } from '../types/index.js'
 
 function isFormulaNode(v: unknown): v is FormulaNode {
   return typeof v === 'object' && v !== null && (v as FormulaNode).kind === 'formula'

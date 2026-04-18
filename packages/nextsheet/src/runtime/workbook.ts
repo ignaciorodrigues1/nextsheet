@@ -1,4 +1,4 @@
-import type { SheetDefinition, SheetNode, WorkbookNode } from '../types.js'
+import type { SheetDefinition, SheetNode, WorkbookNode } from '../types/index.js'
 
 type SheetInput = SheetDefinition | SheetNode | (() => SheetNode)
 
