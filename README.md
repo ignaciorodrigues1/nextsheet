@@ -18,13 +18,15 @@
     <a href="#environment-variables">Environment</a> ·
     <a href="#live-backends">Live Backends</a> ·
     <a href="#charts">Charts</a> ·
+    <a href="#preview-features">Preview</a> ·
+    <a href="#agent-api">Agent API</a> ·
     <a href="#deploy">Deploy</a> ·
     <a href="#roadmap">Roadmap</a>
   </p>
 
   <p>
     <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-000000.svg?style=flat-square" />
-    <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-000000.svg?style=flat-square" />
+    <img alt="Version" src="https://img.shields.io/badge/version-0.4.0-000000.svg?style=flat-square" />
     <img alt="TypeScript" src="https://img.shields.io/badge/typescript-strict-000000.svg?style=flat-square" />
     <img alt="pnpm" src="https://img.shields.io/badge/pnpm-workspace-000000.svg?style=flat-square" />
   </p>
@@ -79,7 +81,6 @@ If you choose to customize:
 ◆  Would you like example sheets?  Yes / No
 ◆  Would you like to configure a live backend?  None / Google Sheets / Excel Online
 ◆  Which package manager?  pnpm / npm / yarn / bun
-◆  Install dependencies now?  Yes / No
 ```
 
 To skip prompts and use recommended defaults:
@@ -213,7 +214,6 @@ import { useFormula, useQuery, useRange, SUM, AVERAGE, col } from 'nextsheet'
 const total = useFormula(() => rows.reduce((s, r) => s + r.amount, 0))
 
 // Formula helpers: produce live spreadsheet formulas (=SUM(B:B)) on xlsx/Sheets targets.
-// In JS mode they compute normally; col() returns [] without a live backend.
 const sum  = useFormula(() => SUM(col('amount')))     // → =SUM(B:B)
 const avg  = useFormula(() => AVERAGE(col('price')))  // → =AVERAGE(C:C)
 
@@ -221,9 +221,46 @@ const avg  = useFormula(() => AVERAGE(col('price')))  // → =AVERAGE(C:C)
 const topRep = useQuery(sales).orderBy('amount', 'desc').first()
 
 // useRange — reads live data from a connected Google Sheet or Excel workbook.
-// Returns [] during static builds; pre-fetched when a backend is configured.
 const sales = useRange<Sale>('Sales!A2:D')
 ```
+
+### Column options (dropdown filters)
+
+Add `options` to a `<Column>` to enable a cross-sheet filter bar in the dev preview and data validation in Excel:
+
+```tsx
+<Column
+  name="status"
+  type="string"
+  options={['pending', 'paid', 'overdue']}
+/>
+```
+
+In the HTML preview, each column with `options` becomes a `<select>` in the filter bar at the top of the sheet. Filters are **cross-sheet**: selecting "paid" on the Invoices tab also filters any other sheet that contains a column with the same name.
+
+### Pagination
+
+Add `<Paginate>` inside a `<Sheet>` to split large sheets into pages in the HTML preview:
+
+```tsx
+import { Sheet, Column, Section, Row, Cell, Paginate } from 'nextsheet'
+
+export default function Expenses() {
+  return (
+    <Sheet name="Expenses">
+      <Paginate pageSize={25} />
+      <Column name="date"   type="date"   primary />
+      <Column name="amount" type="currency" />
+      <Column name="category" type="string"
+        options={['Food', 'Transport', 'Housing', 'Health']}
+      />
+      {/* rows... */}
+    </Sheet>
+  )
+}
+```
+
+Pagination and column filters compose cleanly — the page always shows only rows that pass the active filters.
 
 ---
 
@@ -529,6 +566,184 @@ export default function Dashboard() {
 
 ---
 
+## Preview features
+
+`nextsheet dev` opens a full-featured browser preview that does more than just display your data.
+
+### Column sort
+
+Click any column header to sort that column. Click again to reverse. Click a third time to reset to original order.
+
+- Detects numeric vs. string values automatically (strips currency symbols, commas, percent signs before comparing).
+- Section groupings are temporarily hidden while a sort is active and restored on reset.
+
+### Search (⌘K)
+
+Press `⌘K` (or `Ctrl+K` on Windows/Linux) or click the search icon in the top-right to open the search bar. Type to filter all rows across all sheets simultaneously.
+
+- Matches against the full text content of every cell.
+- Shows a `N / total rows` count as you type.
+- Press `Escape` to dismiss and clear.
+
+### Filter bar
+
+Columns with `options` render a dropdown filter bar above the table. Selecting a value hides rows that don't match. Filters are **cross-sheet** — selecting "paid" on one tab also filters any sheet that contains a column with the same name. Filter state is persisted in `sessionStorage`.
+
+### Schema Inspector
+
+Click the `{ }` button in the top-right to open the Schema Inspector panel. It slides in from the right and shows:
+
+- Every column: name, type badge, PK / required / formula indicators, and all `options` values.
+- Pagination config (page size) when `<Paginate>` is used.
+- Chart count per sheet.
+- Tab bar to switch between sheets without leaving the inspector.
+
+---
+
+## Agent API
+
+`nextsheet/agent` is a programmatic authoring surface designed for LLMs and automated pipelines. Import it separately — the main `nextsheet` bundle is not affected.
+
+```bash
+npm install nextsheet
+```
+
+```ts
+import { wb, toAnthropicTools, toOpenAITools } from 'nextsheet/agent'
+import { xlsxAdapter } from 'nextsheet'
+```
+
+### WorkbookBuilder
+
+Build workbooks programmatically with a fluent API:
+
+```ts
+import { wb } from 'nextsheet/agent'
+import { xlsxAdapter } from 'nextsheet'
+
+const workbook = wb('Sales Report')
+  .sheet('Q1 Sales', (s) => {
+    s.header('Q1 Sales Report', 'January – March 2026')
+     .column('Product', 'string', { primary: true })
+     .column('Revenue', 'currency', { currency: 'USD' })
+     .column('Units', 'number')
+     .column('Region', 'string', { options: ['North', 'South', 'East', 'West'] })
+     .section('Electronics', [
+       ['Laptop Pro',  98_000, 42, 'North'],
+       ['Monitor 4K',  31_000, 88, 'East'],
+     ])
+     .section('Accessories', [
+       ['Keyboard',    12_500, 210, 'South'],
+       ['Mouse',        8_200, 185, 'West'],
+     ])
+     .paginate(25)
+  })
+  .build()
+
+const result = await xlsxAdapter.render(workbook)
+```
+
+### Patch operations
+
+Apply typed patches to an existing workbook — useful for LLM tool-call results:
+
+```ts
+import { wb } from 'nextsheet/agent'
+import type { PatchOperation } from 'nextsheet/agent'
+
+const base = wb('Invoices').sheet('Invoices', (s) => {
+  s.column('client', 'string', { required: true })
+   .column('amount', 'currency', { currency: 'USD' })
+   .column('status', 'string', { options: ['pending', 'paid', 'overdue'] })
+}).build()
+
+// LLM returns patch operations — apply them:
+const patches: PatchOperation[] = [
+  { op: 'addRow', sheet: 'Invoices', values: { client: 'Acme Corp', amount: 4200, status: 'pending' } },
+  { op: 'updateCell', sheet: 'Invoices', rowIndex: 0, column: 'status', value: 'paid', color: 'green' },
+  { op: 'addColumn', sheet: 'Invoices', name: 'due_date', type: 'date' },
+]
+
+const updated = wb('Invoices')
+  .addSheet(base.sheets[0])
+  .applyPatch(...patches)
+  .build()
+```
+
+#### Patch operations reference
+
+| Operation | Fields | Description |
+|---|---|---|
+| `addRow` | `sheet`, `values`, `at?` | Append or insert a row |
+| `updateCell` | `sheet`, `rowIndex`, `column`, `value`, `color?`, `bold?` | Update a single cell |
+| `removeRow` | `sheet`, `rowIndex` | Delete a row by index |
+| `addColumn` | `sheet`, `name`, `type`, `options?`, `formula?`, `at?` | Add a column |
+| `removeColumn` | `sheet`, `column` | Remove a column by name |
+| `setHeader` | `sheet`, `title`, `subtitle?` | Set the sheet header |
+| `addSheet` | `name` | Append a new empty sheet |
+| `renameSheet` | `sheet`, `newName` | Rename an existing sheet |
+
+### LLM tool definitions
+
+`nextsheet/agent` exports pre-built tool definitions for Anthropic and OpenAI — no manual schema writing needed:
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+import { toAnthropicTools, wb } from 'nextsheet/agent'
+import { xlsxAdapter } from 'nextsheet'
+
+const client = new Anthropic()
+
+const response = await client.messages.create({
+  model: 'claude-sonnet-4-6',
+  max_tokens: 4096,
+  tools: toAnthropicTools(),
+  messages: [{
+    role: 'user',
+    content: 'Create a Q2 sales report with regions and revenue by product.',
+  }],
+})
+
+// Handle tool_use blocks from the response
+for (const block of response.content) {
+  if (block.type === 'tool_use' && block.name === 'create_workbook') {
+    const workbook = block.input  // Already matches WorkbookNode shape
+    const xlsx = await xlsxAdapter.render(workbook as any)
+    // save xlsx.data ...
+  }
+}
+```
+
+```ts
+// OpenAI
+import OpenAI from 'openai'
+import { toOpenAITools } from 'nextsheet/agent'
+
+const client = new OpenAI()
+
+const response = await client.chat.completions.create({
+  model: 'gpt-4o',
+  tools: toOpenAITools(),
+  messages: [{ role: 'user', content: 'Create a budget tracker workbook.' }],
+})
+```
+
+### JSON Schemas
+
+The exported schemas are plain JSON Schema objects — use them for validation or to generate your own tools:
+
+```ts
+import { workbookSchema, sheetSchema, columnSchema, patchSchema } from 'nextsheet/agent'
+
+// Validate LLM output with ajv, zod-from-json-schema, etc.
+import Ajv from 'ajv'
+const ajv = new Ajv()
+const validate = ajv.compile(workbookSchema)
+const valid = validate(llmOutput)
+```
+
+---
+
 ## CLI reference
 
 ### `nextsheet build`
@@ -595,7 +810,7 @@ nextsheet dev sheets/Report.sheet.tsx
 nextsheet dev sheets/Sales.sheet.tsx --poll 15000
 ```
 
-The preview opens automatically in your browser. Files are rebuilt on every save; the browser reloads via SSE without losing scroll position.
+The preview opens automatically in your browser. Files are rebuilt on every save; the browser reloads via SSE without losing scroll position. Use ⌘K to search rows, click column headers to sort, and `{ }` to open the Schema Inspector.
 
 ### `nextsheet deploy`
 
@@ -776,6 +991,8 @@ export class NotionAdapter implements Adapter {
 | Custom JSX runtime (`jsxImportSource: "nextsheet"`) | ✅ |
 | `Sheet`, `Column`, `Row`, `Cell`, `Section`, `Header` components | ✅ |
 | `Formula` component (expression capture) | ✅ |
+| `Paginate` component (preview pagination) | ✅ |
+| `Column` `options` prop (dropdown filters + xlsx data validation) | ✅ |
 | `defineSheet(name, render)` | ✅ |
 | `workbook(name, sheets[])` | ✅ |
 | `useFormula(fn)` — JS evaluation at build time | ✅ |
@@ -790,6 +1007,12 @@ export class NotionAdapter implements Adapter {
 | Google Sheets backend (`nextsheet/backends`) | ✅ |
 | Excel Online backend (`nextsheet/backends`) | ✅ |
 | Pluggable `Adapter` interface | ✅ |
+| Enterprise types (`nextsheet` — RBAC, audit, connectors, SSO, scheduling) | ✅ |
+| **Agent API** (`nextsheet/agent`) | ✅ |
+| `WorkbookBuilder` — fluent programmatic API | ✅ |
+| `applyPatch()` — typed patch operations for LLM tool-use | ✅ |
+| JSON Schemas (`workbookSchema`, `patchSchema`, …) | ✅ |
+| `toAnthropicTools()` / `toOpenAITools()` — ready-to-use tool definitions | ✅ |
 
 ### CLI — `packages/nextsheet-cli`
 
@@ -806,6 +1029,11 @@ export class NotionAdapter implements Adapter {
 | `nextsheet deploy --target excel-online` | ✅ |
 | `.env` / `.env.local` / `.env.{mode}` loading | ✅ |
 | `nextsheet.config.ts` — theme applied to xlsx + HTML preview | ✅ |
+| **Preview: column sort** (click header → asc/desc/reset) | ✅ |
+| **Preview: global search** (⌘K — filters rows by text across all sheets) | ✅ |
+| **Preview: Schema Inspector** (`{ }` button — columns, types, options, pagination) | ✅ |
+| **Preview: cross-sheet filter bar** (columns with `options`) | ✅ |
+| **Preview: pagination** (`<Paginate>` component) | ✅ |
 
 ### Google Sheets deploy
 
@@ -842,14 +1070,15 @@ nextsheet/
 │   │   └── src/
 │   │       ├── index.ts
 │   │       ├── jsx-runtime.ts
-│   │       ├── types.ts
 │   │       ├── config.ts         # defineConfig, theme types, globalThis state
-│   │       ├── components/       # Sheet, Column, Row, Cell, Section, Header, Formula, Chart
+│   │       ├── components/       # Sheet, Column, Row, Cell, Section, Header, Formula, Chart, Paginate
 │   │       ├── hooks/            # useFormula, useQuery, useRange
 │   │       ├── formula/          # context, ref, functions (SUM, AVERAGE, col…)
 │   │       ├── runtime/          # defineSheet, workbook, range-context
 │   │       ├── backends/         # GoogleSheetsBackend, ExcelOnlineBackend
-│   │       └── adapters/         # csv, xlsx (theme-aware), supersheet
+│   │       ├── adapters/         # csv, xlsx (theme-aware), supersheet
+│   │       ├── agent/            # WorkbookBuilder, applyPatch, schemas, tool definitions
+│   │       └── types/            # nodes, components, hooks, adapters, enterprise
 │   ├── cli/                      # nextsheet CLI
 │   │   └── src/
 │   │       ├── index.ts
@@ -858,7 +1087,7 @@ nextsheet/
 │   │       ├── env.ts            # .env file loader
 │   │       ├── commands/         # build, dev, deploy
 │   │       ├── backends/         # resolveBackend() helper
-│   │       ├── preview/          # render.ts — HTML preview with theme CSS vars
+│   │       ├── preview/          # render.ts — HTML preview (sort, search, filter, inspector)
 │   │       └── deploy/           # google-sheets.ts, excel-online.ts
 │   └── create-nextsheet-app/     # Project scaffolding CLI
 │       └── src/
@@ -868,7 +1097,8 @@ nextsheet/
 │           └── templates.ts      # all generated file contents (incl. nextsheet.config.ts)
 ├── examples/
 │   ├── invoices/                 # Schema-mode sheet
-│   └── quarterly-report/         # Report-mode sheet
+│   ├── quarterly-report/         # Report-mode sheet
+│   └── personal-finance/         # Full example: 5 sheets, live CoinGecko API, charts, filters
 ├── tsconfig.base.json
 └── pnpm-workspace.yaml
 ```
@@ -879,10 +1109,10 @@ nextsheet/
 
 - **v0.0 — RFC phase** ✅ Core API proposal, component model, adapter interface.
 - **v0.1 — Core runtime** ✅ `defineSheet`, primitive components, CSV + XLSX + SuperSheet adapters, CLI (`build`, `dev`, `deploy`).
-- **v0.2 — Formula translation + Theme** ✅ `useFormula(() => SUM(col('amount')))` transpiles to native spreadsheet formulas (`=SUM(B:B)`). `nextsheet.config.ts` — global theme config (colors, typography, column widths) applied to xlsx output and HTML dev preview with hot reload.
+- **v0.2 — Formula translation + Theme** ✅ `useFormula(() => SUM(col('amount')))` transpiles to native spreadsheet formulas. `nextsheet.config.ts` — global theme config applied to xlsx output and HTML dev preview with hot reload.
 - **v0.3 — Live backends** ✅ `useRange` hook, Google Sheets backend, Excel Online backend, `.env` loading, `nextsheet deploy --target google | excel-online`, `create-nextsheet-app`.
-- **v0.4 — Developer tooling** ⏳ Enhanced browser preview, diff view, schema inspector.
-- **v0.5 — Agent API** ⏳ Programmatic authoring surface designed for LLMs. Structured output schemas, typed patch operations.
+- **v0.4 — Developer tooling** ✅ Enhanced browser preview: column sort, ⌘K full-text search, Schema Inspector panel, cross-sheet filter bar with `Column options`, `<Paginate>` component, enterprise type system.
+- **v0.5 — Agent API** ✅ `nextsheet/agent` — `WorkbookBuilder` fluent API, `applyPatch()` typed patch operations, JSON Schemas for LLM output validation, `toAnthropicTools()` / `toOpenAITools()` ready-to-use tool definitions.
 - **v1.0 — Stable release** ⏳ Frozen public API. Full documentation at `nextsheet.dev`. Production guarantees.
 
 ---

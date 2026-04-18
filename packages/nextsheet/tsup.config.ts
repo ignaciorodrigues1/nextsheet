@@ -8,6 +8,7 @@ export default defineConfig({
     'adapters/xlsx': 'src/adapters/xlsx.ts',
     'adapters/supersheet': 'src/adapters/supersheet.ts',
     backends: 'src/backends/index.ts',
+    agent: 'src/agent/index.ts',
   },
   format: ['esm'],
   dts: true,

@@ -1,6 +1,6 @@
 {
   "name": "nextsheet",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "The framework for the spreadsheet era.",
   "keywords": [
     "spreadsheet",
@@ -36,6 +36,10 @@
     "./backends": {
       "import": "./dist/backends.js",
       "types": "./dist/backends.d.ts"
+    },
+    "./agent": {
+      "import": "./dist/agent.js",
+      "types": "./dist/agent.d.ts"
     }
   },
   "main": "./dist/index.js",

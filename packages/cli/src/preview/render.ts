@@ -379,9 +379,11 @@ function renderSheet(sheet: SheetNode, sheetIdx = 0): string {
 
   // Column header row (schema mode)
   if (columns.length > 0) {
-    const headers = columns.map((col) => `<th class="th col-header">${escapeHTML(col.name)}</th>`)
+    const headers = columns.map((col, ci) =>
+      `<th class="th col-header" data-col-idx="${ci}" onclick="nxtSortCol(${sheetIdx},${ci})" title="Sort by ${escapeHTML(col.name)}">${escapeHTML(col.name)}<span class="sort-ind" aria-hidden="true"></span></th>`
+    )
     while (headers.length < colCount) headers.push('<th class="th"></th>')
-    rows.push(`<tr>${headers.join('')}</tr>`)
+    rows.push(`<tr data-col-header-row="${sheetIdx}">${headers.join('')}</tr>`)
   }
 
   // Sections — track running row index for pagination
@@ -447,6 +449,66 @@ function themeOverrideCSS(): string {
 
   if (vars.length === 0) return ''
   return `\n  <style>\n    :root {\n      ${vars.join(';\n      ')};\n    }\n  </style>`
+}
+
+// ─── Schema inspector panel ───────────────────────────────────────────────────
+
+function renderInspectorPanel(sheets: SheetNode[]): string {
+  const tabBtns = sheets
+    .map((s, i) =>
+      `<button class="ins-tab${i === 0 ? ' active' : ''}" onclick="nxtInspTab(${i})">${escapeHTML(s.name)}</button>`
+    )
+    .join('')
+
+  const panels = sheets
+    .map((s, i) => {
+      const colRows = s.columns
+        .map((col) => {
+          const badges: string[] = []
+          if (col.primary) badges.push('<span class="ins-badge ins-pk">PK</span>')
+          if (col.required) badges.push('<span class="ins-badge ins-req">req</span>')
+          if (col.formula !== undefined) badges.push(`<span class="ins-badge ins-formula" title="=${escapeHTML(col.formula)}">fx</span>`)
+          const optHtml = col.options !== undefined && col.options.length > 0
+            ? `<div class="ins-options">${col.options.map((o) => `<span class="ins-opt">${escapeHTML(o)}</span>`).join('')}</div>`
+            : ''
+          const typeLabel = col.type + (col.currency !== undefined ? ` (${col.currency})` : '')
+          return `
+          <div class="ins-col">
+            <div class="ins-col-row">
+              <span class="ins-col-name">${escapeHTML(col.name)}</span>
+              <span class="ins-type">${escapeHTML(typeLabel)}</span>
+              ${badges.join('')}
+            </div>
+            ${optHtml}
+          </div>`
+        })
+        .join('')
+
+      const paginationRow = s.pagination !== undefined
+        ? `<div class="ins-kv"><span class="ins-kv-key">Pagination</span><span class="ins-kv-val">${s.pagination.pageSize} rows/page</span></div>`
+        : ''
+
+      const chartsRow = s.charts.length > 0
+        ? `<div class="ins-kv"><span class="ins-kv-key">Charts</span><span class="ins-kv-val">${s.charts.length}</span></div>`
+        : ''
+
+      return `
+        <div class="ins-panel${i === 0 ? ' active' : ''}" data-ins-panel="${i}">
+          <div class="ins-meta">${paginationRow}${chartsRow}</div>
+          <div class="ins-col-list">${s.columns.length > 0 ? colRows : '<div class="ins-empty">No columns defined</div>'}</div>
+        </div>`
+    })
+    .join('')
+
+  return `
+  <div class="inspector" id="inspector">
+    <div class="inspector-hd">
+      <span class="inspector-title">Schema Inspector</span>
+      <button class="inspector-close" onclick="nxtToggleInspector()" aria-label="Close">✕</button>
+    </div>
+    <div class="ins-tabs">${tabBtns}</div>
+    <div class="ins-panels">${panels}</div>
+  </div>`
 }
 
 // ─── Full page HTML ───────────────────────────────────────────────────────────
@@ -519,7 +581,7 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
       }
     }
 
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-ui); display: flex; flex-direction: column; }
 
     /* ── Top bar ─────────────────────────────────────────────────── */
     .topbar {
@@ -598,10 +660,219 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
       margin-bottom: -1px;
     }
 
+    /* ── Search bar ─────────────────────────────────────────────── */
+    .search-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .search-bar.open { display: flex; }
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      font-family: var(--font-ui);
+      color: var(--text);
+    }
+    .search-count {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+    .search-esc {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: var(--th-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font-ui);
+    }
+
+    /* ── Topbar buttons ──────────────────────────────────────────── */
+    .topbar-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s, border-color 0.1s;
+      letter-spacing: 0.02em;
+    }
+    .topbar-btn:hover, .topbar-btn.active {
+      background: var(--th-bg);
+      color: var(--text);
+      border-color: var(--muted);
+    }
+
+    /* ── Main layout (panels + inspector) ───────────────────────── */
+    .main-wrap {
+      display: flex;
+      overflow: hidden;
+      flex: 1;
+      min-height: 0;
+    }
+
     /* ── Panels ──────────────────────────────────────────────────── */
-    .panels { overflow: auto; padding: 24px; }
+    .panels { overflow: auto; padding: 24px; flex: 1; min-width: 0; }
     .panel { display: none; }
     .panel.active { display: block; }
+
+    /* ── Sort indicators ─────────────────────────────────────────── */
+    .col-header { cursor: pointer; user-select: none; }
+    .col-header:hover { opacity: 0.8; }
+    .sort-ind {
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 9px;
+      color: var(--muted);
+      vertical-align: middle;
+    }
+    .col-header[data-sort-dir="asc"]  .sort-ind::after { content: ' ▲'; color: #0f766e; }
+    .col-header[data-sort-dir="desc"] .sort-ind::after { content: ' ▼'; color: #0f766e; }
+
+    /* ── Schema Inspector panel ──────────────────────────────────── */
+    .inspector {
+      display: none;
+      width: 280px;
+      flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+      flex-direction: column;
+    }
+    .inspector.open { display: flex; }
+    .inspector-hd {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .inspector-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .inspector-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+    .inspector-close:hover { color: var(--text); }
+    .ins-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .ins-tab {
+      padding: 3px 10px;
+      font-size: 11px;
+      font-family: var(--font-ui);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+    .ins-tab.active {
+      background: var(--th-bg);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .ins-panels { overflow-y: auto; flex: 1; }
+    .ins-panel { display: none; padding: 10px; }
+    .ins-panel.active { display: block; }
+    .ins-meta { margin-bottom: 10px; }
+    .ins-kv {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 11px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ins-kv-key { color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .ins-kv-val { color: var(--text); font-family: var(--font-mono); }
+    .ins-col-list { display: flex; flex-direction: column; gap: 4px; }
+    .ins-col {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+    }
+    .ins-col-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .ins-col-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ins-type {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: #7c9fff;
+      background: #7c9fff18;
+      padding: 1px 6px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .ins-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .ins-pk      { background: #f9731618; color: #f97316; }
+    .ins-req     { background: #ef444418; color: #ef4444; }
+    .ins-formula { background: #a855f718; color: #a855f7; cursor: help; }
+    .ins-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .ins-opt {
+      font-size: 10px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--th-bg);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .ins-empty {
+      font-size: 12px;
+      color: var(--text-dim);
+      padding: 12px 0;
+      text-align: center;
+    }
 
     /* ── Spreadsheet table ───────────────────────────────────────── */
     .sheet-table {
@@ -858,14 +1129,28 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
     <span class="topbar-name">${escapeHTML(wb.name)}</span>
     <div class="topbar-right">
       <span class="build-time" id="build-time">Built at ${buildTime}</span>
+      <button class="topbar-btn" onclick="nxtToggleSearch()" title="Search rows (⌘K)">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+      </button>
+      <button class="topbar-btn" id="inspector-btn" onclick="nxtToggleInspector()" title="Schema Inspector">{ }</button>
       <span class="dot" id="dot" title="Watching for changes"></span>
     </div>
   </div>
 
+  <div class="search-bar" id="search-bar">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;color:var(--muted)"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+    <input class="search-input" id="search-input" type="text" placeholder="Search rows…" autocomplete="off" oninput="nxtSearch(this.value)" onkeydown="if(event.key==='Escape')nxtToggleSearch()" />
+    <span class="search-count" id="search-count"></span>
+    <button class="search-esc" onclick="nxtToggleSearch()">Esc</button>
+  </div>
+
   ${sheets.length > 1 ? `<div class="tabs">${tabs}</div>` : ''}
 
-  <div class="panels">
-    ${sheets.length > 0 ? panels : '<div class="empty">No sheets to preview. Add a <code>.sheet.tsx</code> file.</div>'}
+  <div class="main-wrap" id="main-wrap">
+    <div class="panels">
+      ${sheets.length > 0 ? panels : '<div class="empty">No sheets to preview. Add a <code>.sheet.tsx</code> file.</div>'}
+    </div>
+    ${renderInspectorPanel(sheets)}
   </div>
 
   <div id="error-bar"></div>
@@ -947,7 +1232,8 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
     function _nxtReconcileRow(tr) {
       var filterHidden = tr.dataset.filterHidden === '1'
       var pageHidden   = tr.dataset.pageHidden   === '1'
-      tr.style.display = (filterHidden || pageHidden) ? 'none' : ''
+      var searchHidden = tr.dataset.searchHidden === '1'
+      tr.style.display = (filterHidden || pageHidden || searchHidden) ? 'none' : ''
     }
 
     function _nxtUpdateSectionVisibility(panel) {
@@ -1058,6 +1344,118 @@ export function renderWorkbookHTML(wb: WorkbookNode, port: number): string {
         if (!isNaN(saved) && saved >= 0 && saved < count) selectTab(saved)
       } catch(e) {}
     })()
+
+    // ── Column sort ─────────────────────────────────────────────────
+    function nxtSortCol(sheetIdx, colIdx) {
+      var panel = document.getElementById('panel-' + sheetIdx)
+      if (!panel) return
+      var tbody = panel.querySelector('.sheet-table tbody')
+      if (!tbody) return
+
+      var prevCol = parseInt(panel.dataset.sortCol || '-1', 10)
+      var prevDir = panel.dataset.sortDir || 'none'
+      var dir = (prevCol === colIdx)
+        ? (prevDir === 'asc' ? 'desc' : prevDir === 'desc' ? 'none' : 'asc')
+        : 'asc'
+      panel.dataset.sortCol = colIdx
+      panel.dataset.sortDir = dir
+
+      // Update sort indicator on column headers
+      panel.querySelectorAll('.col-header').forEach(function(th, i) {
+        th.dataset.sortDir = (i === colIdx && dir !== 'none') ? dir : ''
+      })
+
+      var rows = Array.from(panel.querySelectorAll('tr[data-nxt-row]'))
+
+      if (dir === 'none') {
+        rows.sort(function(a, b) {
+          return parseInt(a.dataset.nxtRow, 10) - parseInt(b.dataset.nxtRow, 10)
+        })
+      } else {
+        rows.sort(function(a, b) {
+          var aCells = a.querySelectorAll('td')
+          var bCells = b.querySelectorAll('td')
+          var aText = aCells[colIdx] ? aCells[colIdx].textContent.trim() : ''
+          var bText = bCells[colIdx] ? bCells[colIdx].textContent.trim() : ''
+          var aNum = parseFloat(aText.replace(/[$,%\s]/g, ''))
+          var bNum = parseFloat(bText.replace(/[$,%\s]/g, ''))
+          if (!isNaN(aNum) && !isNaN(bNum)) return dir === 'asc' ? aNum - bNum : bNum - aNum
+          return dir === 'asc' ? aText.localeCompare(bText) : bText.localeCompare(aText)
+        })
+      }
+
+      // Hide section titles while sorted; restore when none
+      panel.querySelectorAll('tr[data-nxt-section-start]').forEach(function(tr) {
+        tr.style.display = dir === 'none' ? '' : 'none'
+      })
+
+      rows.forEach(function(r) { tbody.appendChild(r) })
+    }
+
+    // ── Search ──────────────────────────────────────────────────────
+    function nxtToggleSearch() {
+      var bar = document.getElementById('search-bar')
+      var inp = document.getElementById('search-input')
+      var isOpen = bar.classList.toggle('open')
+      if (isOpen) {
+        inp.value = ''
+        inp.focus()
+        nxtSearch('')
+      } else {
+        nxtSearch('')  // clear results
+      }
+    }
+
+    function nxtSearch(query) {
+      var q = query.trim().toLowerCase()
+      var totalVisible = 0
+      var totalRows = 0
+      document.querySelectorAll('.panel').forEach(function(panel) {
+        panel.querySelectorAll('tr[data-nxt-row]').forEach(function(tr) {
+          totalRows++
+          if (q === '') {
+            tr.dataset.searchHidden = '0'
+            totalVisible++
+          } else {
+            var text = tr.textContent.toLowerCase()
+            var match = text.indexOf(q) !== -1
+            tr.dataset.searchHidden = match ? '0' : '1'
+            if (match) totalVisible++
+          }
+          _nxtReconcileRow(tr)
+        })
+        _nxtUpdateSectionVisibility(panel)
+      })
+      var countEl = document.getElementById('search-count')
+      if (countEl) {
+        countEl.textContent = q ? totalVisible + ' / ' + totalRows : ''
+      }
+    }
+
+    // ── Schema Inspector ────────────────────────────────────────────
+    function nxtToggleInspector() {
+      var insp = document.getElementById('inspector')
+      var btn  = document.getElementById('inspector-btn')
+      var isOpen = insp.classList.toggle('open')
+      btn.classList.toggle('active', isOpen)
+    }
+
+    function nxtInspTab(idx) {
+      document.querySelectorAll('.ins-tab').forEach(function(t, i) {
+        t.classList.toggle('active', i === idx)
+      })
+      document.querySelectorAll('.ins-panel').forEach(function(p, i) {
+        p.classList.toggle('active', i === idx)
+      })
+    }
+
+    // ── Keyboard shortcuts ──────────────────────────────────────────
+    document.addEventListener('keydown', function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        nxtToggleSearch()
+      }
+    })
 
     // ── SSE hot-reload ──────────────────────────────────────────────
     var dot      = document.getElementById('dot')
