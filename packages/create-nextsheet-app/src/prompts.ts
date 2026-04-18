@@ -151,11 +151,7 @@ export async function gatherOptions(argv: string[]): Promise<ProjectOptions> {
     })
   ) as 'npm' | 'pnpm' | 'yarn' | 'bun'
 
-  const install = guard(
-    await confirm({ message: 'Install dependencies now?', initialValue: true })
-  ) as boolean
-
-  return { name, useTypeScript, linter, exampleSheets, backend, packageManager, install }
+  return { name, useTypeScript, linter, exampleSheets, backend, packageManager, install: true }
 }
 
 export { outro, note }
