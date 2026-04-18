@@ -4,7 +4,10 @@ import type { ProjectOptions } from './prompts.js'
 
 export function packageJson(opts: ProjectOptions): string {
   const ext = opts.useTypeScript ? 'tsx' : 'jsx'
-  const sheetEntry = `sheets/Sales.sheet.${ext}`
+  const glob = `sheets/*.sheet.${ext}`
+
+  const pm = opts.packageManager
+  const run = (s: string) => pm === 'yarn' ? `yarn ${s}` : `${pm} run ${s}`
 
   const devDeps: Record<string, string> = {
     'nextsheet-cli': 'latest',
@@ -13,31 +16,35 @@ export function packageJson(opts: ProjectOptions): string {
   if (opts.linter === 'eslint') {
     devDeps['eslint'] = '^9.0.0'
     devDeps['@eslint/js'] = '^9.0.0'
-    if (opts.useTypeScript) {
-      devDeps['typescript-eslint'] = '^8.0.0'
-    }
+    if (opts.useTypeScript) devDeps['typescript-eslint'] = '^8.0.0'
   }
   if (opts.linter === 'biome') {
     devDeps['@biomejs/biome'] = '^1.9.0'
   }
 
   const scripts: Record<string, string> = {
-    dev: `nextsheet dev ${sheetEntry}`,
-    build: `nextsheet build ${sheetEntry} --target xlsx`,
-    'build:csv': `nextsheet build ${sheetEntry} --target csv`,
-    deploy: `nextsheet deploy ${sheetEntry}`,
+    dev:          `nextsheet dev ${glob}`,
+    build:        `${run('build:csv')} && ${run('build:xlsx')} && ${run('build:html')}`,
+    'build:csv':  `nextsheet build ${glob} --target csv  --out dist/workbook.csv`,
+    'build:xlsx': `nextsheet build ${glob} --target xlsx --out dist/workbook.xlsx`,
+    'build:html': `nextsheet build ${glob} --target html --out dist/index.html`,
+    deploy:       `nextsheet deploy ${glob} --target supersheet`,
   }
+
   if (opts.backend === 'google') {
-    scripts['dev:live'] = `nextsheet dev ${sheetEntry} --google-spreadsheet-id $GOOGLE_SPREADSHEET_ID`
-    scripts['deploy:google'] = `nextsheet deploy ${sheetEntry} --target google`
+    scripts['dev:live']      = `nextsheet dev ${glob} --google-spreadsheet-id $GOOGLE_SPREADSHEET_ID`
+    scripts['deploy:google'] = `nextsheet deploy ${glob} --target google`
+    delete scripts['deploy']
   }
   if (opts.backend === 'excel-online') {
-    scripts['dev:live'] = `nextsheet dev ${sheetEntry} --drive-item-id $EXCEL_DRIVE_ITEM_ID`
-    scripts['deploy:excel'] = `nextsheet deploy ${sheetEntry} --target excel-online`
+    scripts['dev:live']     = `nextsheet dev ${glob} --drive-item-id $EXCEL_DRIVE_ITEM_ID`
+    scripts['deploy:excel'] = `nextsheet deploy ${glob} --target excel-online`
+    delete scripts['deploy']
   }
+
   if (opts.linter === 'eslint') scripts['lint'] = 'eslint sheets/'
   if (opts.linter === 'biome') {
-    scripts['lint'] = 'biome check sheets/'
+    scripts['lint']   = 'biome check sheets/'
     scripts['format'] = 'biome format --write sheets/'
   }
   if (opts.useTypeScript) scripts['typecheck'] = 'tsc --noEmit'
@@ -421,13 +428,12 @@ export default defineConfig({
 
 export function readme(opts: ProjectOptions): string {
   const ext = opts.useTypeScript ? 'tsx' : 'jsx'
-  const sheetFile = `sheets/Sales.sheet.${ext}`
   const pm = opts.packageManager
 
   const run = (cmd: string) =>
     pm === 'npm' ? `npm run ${cmd}` :
     pm === 'yarn' ? `yarn ${cmd}` :
-    `${pm} ${cmd}`
+    `${pm} run ${cmd}`
 
   const lines = [
     `# ${opts.name}`,
@@ -443,9 +449,16 @@ export function readme(opts: ProjectOptions): string {
     '## Build',
     '',
     '```sh',
-    `${run('build')}       # → dist/*.xlsx`,
-    `${run('build:csv')}   # → dist/*.csv`,
+    `${run('build')}         # → dist/workbook.csv + dist/workbook.xlsx + dist/index.html`,
+    `${run('build:csv')}     # → dist/workbook.csv`,
+    `${run('build:xlsx')}    # → dist/workbook.xlsx`,
+    `${run('build:html')}    # → dist/index.html`,
     '```',
+    '',
+    '## Theme',
+    '',
+    'Edit `nextsheet.config.ts` to customize colors, fonts, and layout.',
+    'Changes hot-reload instantly during `dev`.',
     '',
     '## Deploy',
     '',
@@ -504,6 +517,7 @@ export function readme(opts: ProjectOptions): string {
     `${opts.name}/`,
     '├── sheets/',
     `│   └── Sales.sheet.${ext}   ← your sheet definitions`,
+    '├── nextsheet.config.ts       ← theme: colors, typography, column widths',
     '├── .env.example              ← variable reference',
     '├── .env.local                ← your local secrets (gitignored)',
     '└── package.json',

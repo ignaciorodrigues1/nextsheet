@@ -47,19 +47,20 @@ nextsheet build sheets/*.sheet.tsx --target supersheet
 
 ### `nextsheet dev`
 
-Start a live browser preview at `localhost:3000`. Watches for file changes and hot-reloads the page automatically.
+Start a live browser preview (default `localhost:3000`). Watches for file changes and hot-reloads the page automatically.
 
 ```
 nextsheet dev <files...> [options]
 
 Options:
-  -p, --port <port>   Port to listen on  (default: 3000)
+  -p, --port <port>   Port (default: $PORT from the environment or `.env.local`, then 3000)
   -n, --name <name>   Workbook name
 ```
 
 ```bash
 nextsheet dev sheets/Report.sheet.tsx
 nextsheet dev sheets/*.sheet.tsx --name "Finance 2026" --port 4000
+# or set PORT=4000 in .env.local (loaded before the server starts)
 ```
 
 The preview renders a fully formatted spreadsheet in the browser — sheet tabs, column headers, cell formatting, section titles — and reloads instantly on every save. Build errors appear as a toast without losing the last good preview.

@@ -13,8 +13,8 @@ import { loadEnv } from '../env.js'
 export function devCommand(program: Command): void {
   const cmd = program
     .command('dev <files...>')
-    .description('Start a live preview server at localhost:3000.')
-    .option('-p, --port <port>', 'port to listen on', '3000')
+    .description('Start a live preview server (default port 3000, or $PORT from env / .env.local).')
+    .option('-p, --port <port>', 'port to listen on')
     .option('-n, --name <name>', 'workbook name', 'Workbook')
     .option(
       '--poll <ms>',
@@ -36,10 +36,10 @@ export function devCommand(program: Command): void {
       driveItemId?: string
     }
   ) => {
-    const port = parseInt(opts.port, 10)
-    const absFiles = files.map((f) => resolve(process.cwd(), f))
     loadEnv('development')
     await loadConfig()
+    const port = parseInt(String(opts.port ?? process.env.PORT ?? '3000'), 10)
+    const absFiles = files.map((f) => resolve(process.cwd(), f))
     const backend: Backend | undefined = resolveBackend(opts)
     const pollMs = opts.poll ? parseInt(opts.poll, 10) : undefined
 
@@ -92,6 +92,14 @@ export function devCommand(program: Command): void {
 
       res.writeHead(404)
       res.end('Not found')
+    })
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        log.error(`Port ${port} is already in use. Try another: nextsheet dev <file> --port 3010 (or set PORT in .env.local after upgrading nextsheet-cli).`)
+        process.exit(1)
+      }
+      throw err
     })
 
     server.listen(port, () => {
