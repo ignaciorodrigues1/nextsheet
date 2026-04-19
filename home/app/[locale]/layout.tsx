@@ -3,6 +3,7 @@ import { Inter_Tight, JetBrains_Mono } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
+import Script from 'next/script'
 import { routing } from '@/i18n/routing'
 import '../globals.css'
 
@@ -46,6 +47,13 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className={`${interTight.variable} ${jetbrainsMono.variable}`}>
       <body>
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-ZKJMS5VE9N" strategy="afterInteractive" />
+        <Script id="gtag-init" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-ZKJMS5VE9N');
+        `}</Script>
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
