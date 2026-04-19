@@ -1,15 +1,4 @@
-const terminalHtml = `<span class="hl-cmt"># crea un proyecto nuevo</span>
-<span class="hl-gn">$</span> npx create-nextsheet-app revenue-model
-<span class="hl-cmt">  ✓ TypeScript</span>
-<span class="hl-cmt">  ✓ ESLint configurado</span>
-<span class="hl-cmt">  ✓ Git repo inicializado</span>
-
-<span class="hl-gn">$</span> cd revenue-model && pnpm dev
-<span class="hl-cmt">  ▲ NextSheet 0.4.0</span>
-<span class="hl-cmt">  - local:    http://localhost:3000</span>
-<span class="hl-cmt">  - sheet:    file://./dist/forecast.xlsx</span>
-<span class="hl-cmt">  - types:    generating ./types/cells.d.ts</span>
-<span class="hl-cmt">  ✓ compiled in 142ms</span>`
+import { getTranslations } from 'next-intl/server'
 
 const codeHtml = `<span class="hl-kw">import</span> { <span class="hl-var">Sheet</span>, <span class="hl-var">Column</span>, <span class="hl-var">Row</span>, <span class="hl-var">Cell</span> } <span class="hl-kw">from</span> <span class="hl-str">'nextsheet'</span>
 
@@ -33,18 +22,32 @@ const codeHtml = `<span class="hl-kw">import</span> { <span class="hl-var">Sheet
   )
 }`
 
-export default function GettingStarted() {
+export default async function GettingStarted() {
+  const t = await getTranslations('gettingStarted')
+  const h2Html = (t.raw('h2') as string).replace('<accent>', '<span style="color:var(--accent)">').replace('</accent>', '</span>')
+  const pHtml = t.raw('p') as string
+
+  const terminalHtml = `<span class="hl-cmt">${t('terminal_comment1')}</span>
+<span class="hl-gn">$</span> npx create-nextsheet-app revenue-model
+<span class="hl-cmt">  ${t('terminal_ok1')}</span>
+<span class="hl-cmt">  ${t('terminal_ok2')}</span>
+<span class="hl-cmt">  ${t('terminal_ok3')}</span>
+
+<span class="hl-gn">$</span> cd revenue-model && pnpm dev
+<span class="hl-cmt">  ${t('terminal_ok4')}</span>
+<span class="hl-cmt">  - local:    http://localhost:3000</span>
+<span class="hl-cmt">  - sheet:    file://./dist/forecast.xlsx</span>
+<span class="hl-cmt">  - types:    generating ./types/cells.d.ts</span>
+<span class="hl-cmt">  ${t('terminal_ok5')}</span>`
+
   return (
     <section id="start">
       <div className="container">
         <div className="section-head">
-          <div className="kicker"><span className="n">02</span> Empezar</div>
+          <div className="kicker"><span className="n">02</span> {t('kicker').replace('02 ', '')}</div>
           <div>
-            <h2>Desde cero a un .xlsx tipado en <span style={{ color: 'var(--accent)' }}>30 segundos</span>.</h2>
-            <p>
-              Una sola dependencia. Autoría local-first. Compila a todas las superficies —{' '}
-              <strong>Google Sheets, Excel Online, .xlsx, .csv</strong> — desde el mismo código fuente.
-            </p>
+            <h2 dangerouslySetInnerHTML={{ __html: h2Html }} />
+            <p dangerouslySetInnerHTML={{ __html: pHtml }} />
           </div>
         </div>
 

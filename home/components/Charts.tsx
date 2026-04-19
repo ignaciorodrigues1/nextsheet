@@ -1,16 +1,15 @@
-export default function Charts() {
+import { getTranslations } from 'next-intl/server'
+
+export default async function Charts() {
+  const t = await getTranslations('charts')
   return (
     <section id="charts">
       <div className="container">
         <div className="section-head">
-          <div className="kicker"><span className="n">05</span> Charts</div>
+          <div className="kicker"><span className="n">05</span> {t('kicker').replace('05 ', '')}</div>
           <div>
-            <h2>Los gráficos son componentes, no capturas.</h2>
-            <p>
-              Un <code className="mono" style={{ color: 'var(--fg-2)' }}>&lt;Chart/&gt;</code> de NextSheet
-              se emite como chart nativo de la superficie target: editable en Sheets, interactivo en Excel,
-              SVG en el browser. <strong>Mismo componente, cinco destinos.</strong>
-            </p>
+            <h2>{t('h2')}</h2>
+            <p dangerouslySetInnerHTML={{ __html: t.raw('p') as string }} />
           </div>
         </div>
 
@@ -41,7 +40,7 @@ export default function Charts() {
               <span>&lt;Chart type=&quot;bar&quot; /&gt;</span>
               <b>q3</b>
             </div>
-            <div className="cval">34,019 <span className="delta" style={{ color: 'var(--fg-3)' }}>unidades · 5 regiones</span></div>
+            <div className="cval">34,019 <span className="delta" style={{ color: 'var(--fg-3)' }}>{t('bar_label')}</span></div>
             <svg viewBox="0 0 300 110">
               <rect x="10"  y="28" width="42" height="70" fill="oklch(0.84 0.18 142)" />
               <rect x="62"  y="44" width="42" height="54" fill="oklch(0.84 0.18 142 / 0.75)" />

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 
 const sbCodeHtml = `<span class="hl-cmt">// sheets/Sales.sheet.tsx</span>
 <span class="hl-kw">import</span> { <span class="hl-var">Sheet</span>, <span class="hl-var">Column</span>, <span class="hl-var">Row</span>, <span class="hl-var">Cell</span> } <span class="hl-kw">from</span> <span class="hl-str">'nextsheet'</span>
@@ -23,6 +24,7 @@ const sbCodeHtml = `<span class="hl-cmt">// sheets/Sales.sheet.tsx</span>
 }`
 
 export default function CTABand() {
+  const t = useTranslations('cta')
   const bodyRef   = useRef<HTMLDivElement>(null)
   const sheetRef  = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
@@ -87,15 +89,17 @@ export default function CTABand() {
     }
   }, [])
 
+  const h2Lines = t('h2').split('\n')
+
   return (
     <section className="cta-band">
       <div className="bg" />
       <div className="container">
-        <h2>El primer framework<br />para mil millones de autores.</h2>
-        <p>Abierto, versionado, escrito en TypeScript.</p>
+        <h2>{h2Lines[0]}<br />{h2Lines[1]}</h2>
+        <p>{t('p')}</p>
         <div className="cta">
           <a href="https://www.npmjs.com/package/create-nextsheet-app" className="btn primary" target="_blank" rel="noopener">
-            <span className="mono">$ npm create nextsheet-app</span>
+            <span className="mono">{t('btn_create')}</span>
           </a>
           <a href="https://github.com/ignaciorodrigues1/nextsheet" className="btn" target="_blank" rel="noopener">
             GitHub →
@@ -149,7 +153,7 @@ export default function CTABand() {
               </div>
             </div>
             {/* Handle */}
-            <div className="sb-handle" id="sbHandle" ref={handleRef} role="slider" aria-label="Arrastrar para comparar" tabIndex={0}>
+            <div className="sb-handle" id="sbHandle" ref={handleRef} role="slider" aria-label="Drag to compare" tabIndex={0}>
               <div className="sb-handle-bar" />
               <div className="sb-handle-knob">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -158,8 +162,8 @@ export default function CTABand() {
                 </svg>
               </div>
             </div>
-            <div className="sb-label sb-label-l mono">source · .tsx</div>
-            <div className="sb-label sb-label-r mono">output · .xlsx</div>
+            <div className="sb-label sb-label-l mono">{t('label_source')}</div>
+            <div className="sb-label sb-label-r mono">{t('label_output')}</div>
           </div>
         </div>
 

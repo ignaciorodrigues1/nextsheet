@@ -50,6 +50,10 @@ nav.top ul.nav-links{display:flex;gap:4px;list-style:none;padding:0;margin:0}
 nav.top ul.nav-links a{padding:6px 10px;font-size:13px;color:var(--fg-2);border-radius:6px;transition:color .15s,background .15s}
 nav.top ul.nav-links a:hover{color:var(--fg);background:var(--bg-2)}
 nav.top .actions{display:flex;gap:8px;align-items:center}
+.locale-switcher{display:flex;gap:2px;align-items:center;border:1px solid var(--border-2);border-radius:6px;padding:2px;margin:0 4px}
+.locale-btn{background:none;border:none;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-3);padding:3px 7px;border-radius:4px;transition:color .15s,background .15s;letter-spacing:0.04em;font-weight:500}
+.locale-btn:hover{color:var(--fg);background:var(--bg-2)}
+.locale-btn.active{color:var(--accent);background:var(--accent-dim)}
 .btn{
   display:inline-flex;align-items:center;gap:8px;
   font-size:13px;font-weight:500;height:32px;padding:0 14px;border-radius:6px;

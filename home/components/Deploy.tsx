@@ -1,29 +1,27 @@
-export default function Deploy() {
+import { getTranslations } from 'next-intl/server'
+
+export default async function Deploy() {
+  const t = await getTranslations('deploy')
   return (
     <section id="deploy">
       <div className="container">
         <div className="section-head">
-          <div className="kicker"><span className="n">06</span> Deploy</div>
+          <div className="kicker"><span className="n">06</span> {t('kicker').replace('06 ', '')}</div>
           <div>
-            <h2>Git es la fuente de verdad. No el archivo.</h2>
-            <p>
-              Cada cambio es un PR. Cada release es un tag. Cada rollback es un{' '}
-              <code className="mono" style={{ color: 'var(--fg-2)' }}>git revert</code>. Por fin,
-              tus modelos financieros dejan de vivir en{' '}
-              <code className="mono" style={{ color: 'var(--fg-2)' }}>modelo_FINAL_v7_JUAN_vdef.xlsx</code>.
-            </p>
+            <h2>{t('h2')}</h2>
+            <p dangerouslySetInnerHTML={{ __html: t.raw('p') as string }} />
           </div>
         </div>
 
         <div className="feature-row">
           <div className="feature-card">
-            <h3>CI que entiende de celdas</h3>
-            <p>Diffs por celda, no por bytes. Tests sobre fórmulas. El reviewer ve <em>qué número cambió</em> y <em>por qué</em>, no un blob binario.</p>
+            <h3>{t('card1_h3')}</h3>
+            <p dangerouslySetInnerHTML={{ __html: t.raw('card1_p') as string }} />
             <div className="visual">
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)', color: 'var(--fg-3)', fontSize: 11 }}>
                   <span>diff · sheets/forecast.sheet.tsx</span>
-                  <span style={{ color: 'var(--accent)' }}>● passing</span>
+                  <span style={{ color: 'var(--accent)' }}>{t('card1_passing')}</span>
                 </div>
                 <div style={{ padding: '12px 14px', lineHeight: 1.7 }}>
                   <div style={{ color: 'oklch(0.7 0.2 25)', background: 'oklch(0.7 0.2 25 / 0.08)', padding: '0 8px', margin: '0 -8px' }}>
@@ -44,8 +42,8 @@ export default function Deploy() {
           </div>
 
           <div className="feature-card">
-            <h3>Preview deployments por PR</h3>
-            <p>Cada pull request genera un .xlsx ephemeral, un Sheet descartable, y un URL compartible. Tu CFO revisa el modelo antes de que llegue a main.</p>
+            <h3>{t('card2_h3')}</h3>
+            <p>{t('card2_p')}</p>
             <div className="visual">
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
                 <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', color: 'var(--fg-3)', fontSize: 11 }}>
@@ -55,8 +53,8 @@ export default function Deploy() {
                   <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                     <span style={{ color: 'var(--accent)' }}>✓</span>
                     <div>
-                      <div style={{ color: 'var(--fg)' }}>Preview listo para <b style={{ fontWeight: 500 }}>#pr-482</b></div>
-                      <div style={{ color: 'var(--fg-3)', fontSize: 11 }}>ajuste growth rate Q3</div>
+                      <div style={{ color: 'var(--fg)' }}>{t('card2_preview')} <b style={{ fontWeight: 500 }}>#pr-482</b></div>
+                      <div style={{ color: 'var(--fg-3)', fontSize: 11 }}>{t('card2_desc')}</div>
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14, fontSize: 11.5 }}>

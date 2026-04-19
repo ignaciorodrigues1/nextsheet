@@ -1,61 +1,61 @@
-const backends = [
-  {
-    name: 'Google Sheets',
-    accentBorder: true,
-    status: 'Estable',
-    desc: 'Sync bidireccional vía OAuth. Fórmulas nativas, no imágenes. Colaboradores ven celdas — no código.',
-    cmd: 'nextsheet deploy --target google',
-  },
-  {
-    name: 'Excel Online',
-    accentBorder: true,
-    status: 'Estable',
-    desc: 'Microsoft Graph. Push a SharePoint o OneDrive. Funciona con cuentas corporativas sin add-ins.',
-    cmd: 'nextsheet deploy --target excel-online',
-  },
-  {
-    name: '.xlsx estático',
-    accentBorder: true,
-    status: 'Estable',
-    desc: 'Binario OOXML generado en build. Ideal para emails, reportes, distribución offline y auditoría.',
-    cmd: 'nextsheet build --target xlsx',
-  },
-  {
-    name: '.csv / .tsv',
-    accentBorder: true,
-    status: 'Estable',
-    desc: 'Flatten a tabular, listo para ingestar en BigQuery, Snowflake, Redshift. Escape automático, encoding UTF-8.',
-    cmd: 'nextsheet build --target csv',
-  },
-  {
-    name: 'SuperSheet',
-    accentBorder: true,
-    status: 'Estable',
-    desc: 'Deploy a la plataforma hosted de NextSheet. URL compartible, diff por PR, preview ephemeral.',
-    cmd: 'nextsheet deploy --target supersheet',
-  },
-  {
-    name: 'Agent API',
-    accentBorder: false,
-    status: 'Nuevo · v0.5',
-    desc: 'WorkbookBuilder fluent + applyPatch(). JSON schemas para LLMs. toAnthropicTools() / toOpenAITools().',
-    cmd: "import { wb } from 'nextsheet/agent'",
-  },
-]
+import { getTranslations } from 'next-intl/server'
 
-export default function Backends() {
+export default async function Backends() {
+  const t = await getTranslations('backends')
+
+  const backends = [
+    {
+      name: 'Google Sheets',
+      accentBorder: true,
+      status: t('b1_status'),
+      desc: t('b1_desc'),
+      cmd: 'nextsheet deploy --target google',
+    },
+    {
+      name: 'Excel Online',
+      accentBorder: true,
+      status: t('b2_status'),
+      desc: t('b2_desc'),
+      cmd: 'nextsheet deploy --target excel-online',
+    },
+    {
+      name: t('b3_name'),
+      accentBorder: true,
+      status: t('b3_status'),
+      desc: t('b3_desc'),
+      cmd: 'nextsheet build --target xlsx',
+    },
+    {
+      name: '.csv / .tsv',
+      accentBorder: true,
+      status: t('b4_status'),
+      desc: t('b4_desc'),
+      cmd: 'nextsheet build --target csv',
+    },
+    {
+      name: 'SuperSheet',
+      accentBorder: true,
+      status: t('b5_status'),
+      desc: t('b5_desc'),
+      cmd: 'nextsheet deploy --target supersheet',
+    },
+    {
+      name: 'Agent API',
+      accentBorder: false,
+      status: t('b6_status'),
+      desc: t('b6_desc'),
+      cmd: "import { wb } from 'nextsheet/agent'",
+    },
+  ]
+
   return (
     <section id="backends">
       <div className="container">
         <div className="section-head">
-          <div className="kicker"><span className="n">04</span> Backends &amp; targets</div>
+          <div className="kicker"><span className="n">04</span> {t('kicker').replace('04 ', '')}</div>
           <div>
-            <h2>Escribí una vez. Deployá a donde el negocio ya está.</h2>
-            <p>
-              El CFO abre Excel. Marketing abre Sheets. Finanzas vive en PDFs auditados.
-              NextSheet compila a todas las superficies donde tus usuarios ya trabajan —{' '}
-              <strong>sin migrarlos a un producto nuevo</strong>.
-            </p>
+            <h2>{t('h2')}</h2>
+            <p dangerouslySetInnerHTML={{ __html: t.raw('p') as string }} />
           </div>
         </div>
 

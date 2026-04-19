@@ -1,7 +1,9 @@
 'use client'
 import { useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 
 export default function Hero() {
+  const t = useTranslations('hero')
   const termRef = useRef<HTMLDivElement>(null)
   const paneCodeRef = useRef<HTMLDivElement>(null)
   const paneSheetRef = useRef<HTMLDivElement>(null)
@@ -153,37 +155,33 @@ export default function Hero() {
       <div className="container inner">
         <span className="eyebrow">
           <span className="pill">v0.4</span>
-          Agent API · Schema Inspector · Column sort &amp; search
+          {t('eyebrow')}
           <span className="mono" style={{ color: 'var(--fg-3)' }}>→</span>
         </span>
         <h1 className="display">
-          El <span className="green">framework</span><br />
-          para la era<br />
-          de la <span className="slash">hoja de cálculo.</span>
+          {t('h1_1')} <span className="green">{t('h1_green')}</span><br />
+          {t('h1_2')}<br />
+          <span className="slash">{t('h1_slash')}</span>
         </h1>
-        <p className="lede">
-          Mil millones de personas <strong>programan lógica dentro de hojas de cálculo</strong> cada día.
-          Nunca han tenido un framework. NextSheet lo es: componentes, tipos de punta a punta,
-          versión en Git, deploy a cualquier superficie.
-        </p>
+        <p className="lede" dangerouslySetInnerHTML={{ __html: t.raw('lede') as string }} />
         <div className="cta">
           <a href="#start" className="btn primary">
-            <span className="mono">$ npm i nextsheet</span>
+            <span className="mono">{t('cta_install')}</span>
           </a>
           <a href="#how" className="btn">
-            Ver cómo funciona
+            {t('cta_how')}
             <span className="mono" style={{ color: 'var(--fg-3)' }}>→</span>
           </a>
           <a href="https://github.com/ignaciorodrigues1/nextsheet" className="btn" target="_blank" rel="noopener">
             <span className="mono" style={{ color: 'var(--fg-3)', fontSize: 11 }}>MIT</span>
-            Open source
+            {t('cta_open')}
           </a>
         </div>
         <div className="meta">
-          <span><span className="dot" />Live en npm</span>
-          <span className="mono">TypeScript 5.x</span>
-          <span className="mono">Node 20+</span>
-          <span className="mono">0 runtime deps</span>
+          <span><span className="dot" />{t('meta_live')}</span>
+          <span className="mono">{t('meta_ts')}</span>
+          <span className="mono">{t('meta_node')}</span>
+          <span className="mono">{t('meta_deps')}</span>
         </div>
 
         {/* HERO DEMO */}
@@ -192,9 +190,9 @@ export default function Hero() {
             <div className="dots"><i /><i /><i /></div>
             <span className="path mono">~/revenue-model/sheets/q3-forecast.sheet.tsx</span>
             <div className="tabs">
-              <span className="tab on" data-view="split" onClick={() => handleTabClick('split')}>split</span>
-              <span className="tab" data-view="sheet" onClick={() => handleTabClick('sheet')}>.xlsx</span>
-              <span className="tab" data-view="code" onClick={() => handleTabClick('code')}>.tsx</span>
+              <span className="tab on" data-view="split" onClick={() => handleTabClick('split')}>{t('tab_split')}</span>
+              <span className="tab" data-view="sheet" onClick={() => handleTabClick('sheet')}>{t('tab_xlsx')}</span>
+              <span className="tab" data-view="code" onClick={() => handleTabClick('code')}>{t('tab_tsx')}</span>
             </div>
           </div>
           <div className="demo-grid" id="demoGrid">
