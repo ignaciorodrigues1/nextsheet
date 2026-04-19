@@ -152,7 +152,7 @@ export default function Hero() {
   return (
     <header className="hero">
       <div className="grid-bg" />
-      <div className="container inner">
+      <div className="container mt-20">
         <span className="eyebrow">
           <span className="pill">v0.4</span>
           {t('eyebrow')}
