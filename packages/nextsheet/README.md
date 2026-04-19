@@ -2,7 +2,7 @@
 
 > The framework for the spreadsheet era.
 
-Build spreadsheets as typed React-like components. One codebase compiles to CSV, Excel, Google Sheets, and any backend you need.
+Build spreadsheets as typed React-like components. One codebase compiles to CSV, Excel, Google Sheets, and any backend you need. Now with a first-class Agent API for LLM-driven workbook manipulation.
 
 ```bash
 npm install nextsheet
@@ -61,6 +61,190 @@ Or use the CLI:
 ```bash
 npx nextsheet build Invoices.sheet.tsx --target xlsx --out dist/invoices.xlsx
 npx nextsheet dev   Invoices.sheet.tsx   # live browser preview at localhost:3000
+```
+
+---
+
+## Agent API
+
+The `nextsheet/agent` entrypoint gives LLMs a structured way to create and edit workbooks — without string parsing, brittle prompts, or custom schemas.
+
+```ts
+import {
+  wb, fromWorkbook,
+  toAnthropicTools, toOpenAITools,
+  validatePatch, validateWorkbook, validatePatches,
+  AgentError,
+} from 'nextsheet/agent'
+```
+
+### Build a workbook programmatically
+
+```ts
+import { wb } from 'nextsheet/agent'
+import { xlsxAdapter } from 'nextsheet'
+
+const builder = wb('Q1 Finance')
+  .sheet('Revenue', (s) => {
+    s.column('Month',   'string',   { primary: true })
+     .column('Revenue', 'currency', { currency: 'USD' })
+     .column('Growth',  'percent')
+     .row(['Jan', 420_000, 0.08])
+     .row(['Feb', 510_000, 0.21])
+     .row(['Mar', 480_000, -0.06])
+  })
+
+const node = builder.build()
+const xlsx = await xlsxAdapter.render(node)
+```
+
+### Edit an existing workbook with patches
+
+Use `applyPatch()` to apply one or more operations atomically. Great for applying LLM-generated edits to a workbook the user already has open.
+
+```ts
+import { fromWorkbook } from 'nextsheet/agent'
+
+const builder = fromWorkbook(existingNode)   // deep-copies the node
+
+builder.applyPatch(
+  { op: 'addRow',    sheet: 'Revenue', values: { Month: 'Apr', Revenue: 560_000, Growth: 0.17 } },
+  { op: 'updateCell', sheet: 'Revenue', rowIndex: 0, column: 'Revenue', value: 425_000 },
+  { op: 'addColumn', sheet: 'Revenue', name: 'Forecast', type: 'currency' },
+)
+
+const updated = builder.build()
+```
+
+### Patch operations
+
+| `op` | Required fields | Description |
+|---|---|---|
+| `addRow` | `sheet`, `values` | Append or insert a row. `values` maps column name → value. |
+| `removeRow` | `sheet`, `rowIndex` | Remove the row at a 0-based index. |
+| `updateCell` | `sheet`, `rowIndex`, `column` | Set `value`, `formula`, `format`, `color`, and/or `bold` on a cell. |
+| `addColumn` | `sheet`, `name`, `type` | Append or insert a column. Adds a null cell to every existing row. |
+| `removeColumn` | `sheet`, `column` | Remove a column and its cells from all rows. |
+| `updateColumn` | `sheet`, `column`, `updates` | Rename, retype, or change options on a column. |
+| `setHeader` | `sheet`, `title` | Set the sheet header title (and optional subtitle). |
+| `addSheet` | `name` | Add a blank sheet to the workbook. |
+| `removeSheet` | `sheet` | Remove a sheet by name. |
+| `renameSheet` | `sheet`, `newName` | Rename a sheet. |
+| `addChart` | `sheet`, `chart` | Append a chart to a sheet. |
+
+Column types: `string` · `number` · `currency` · `boolean` · `date` · `percent`
+
+Chart types: `bar` · `horizontal-bar` · `line` · `area` · `stacked-bar` · `stacked-area` · `pie` · `donut` · `scatter` · `bubble` · `radar`
+
+### Error handling
+
+`applyPatch()` throws `AgentError` (a subclass of `Error`) on invalid operations. The `code` property is safe to switch on.
+
+```ts
+import { AgentError } from 'nextsheet/agent'
+
+try {
+  builder.applyPatch({ op: 'addRow', sheet: 'Typo', values: {} })
+} catch (e) {
+  if (e instanceof AgentError) {
+    console.error(e.code)   // 'SHEET_NOT_FOUND'
+    console.error(e.op)     // 'addRow'
+    console.error(e.message) // '[SHEET_NOT_FOUND] addRow: sheet "Typo" does not exist'
+  }
+}
+```
+
+| Code | Trigger |
+|---|---|
+| `SHEET_NOT_FOUND` | `sheet` references a name that doesn't exist |
+| `SHEET_ALREADY_EXISTS` | `addSheet` / `renameSheet` targets an existing name |
+| `COLUMN_NOT_FOUND` | `column` references a name not in the sheet |
+| `COLUMN_ALREADY_EXISTS` | `addColumn` / `updateColumn` rename uses a name already in use |
+| `ROW_OUT_OF_BOUNDS` | `rowIndex` is negative or ≥ rows.length |
+| `EMPTY_UPDATE` | `updateColumn` called with an empty `updates` object |
+
+### Validation
+
+Validate LLM output before passing it to `applyPatch()` to avoid runtime errors.
+
+```ts
+import { validatePatch, validateWorkbook, validatePatches } from 'nextsheet/agent'
+
+// Single patch
+const r = validatePatch(agentOutput)
+if (!r.valid) {
+  console.error(r.errors)  // ['op: must be equal to one of the allowed values', ...]
+} else {
+  builder.applyPatch(agentOutput as PatchOperation)
+}
+
+// Array of patches — returns index of first invalid one
+const r2 = validatePatches(agentPatches)
+if (!r2.valid) {
+  throw new Error(`Patch[${r2.index}] is invalid: ${r2.errors.join(', ')}`)
+}
+
+// Whole workbook (from create_workbook tool)
+const r3 = validateWorkbook(toolCallInput)
+if (r3.valid) {
+  const node = toolCallInput as WorkbookNode
+}
+```
+
+### LLM tool definitions
+
+Pass tool schemas directly to the Anthropic or OpenAI API:
+
+```ts
+import { toAnthropicTools, toOpenAITools } from 'nextsheet/agent'
+import Anthropic from '@anthropic-ai/sdk'
+
+const client = new Anthropic()
+
+const response = await client.messages.create({
+  model: 'claude-opus-4-7',
+  max_tokens: 4096,
+  tools: toAnthropicTools(),   // create_workbook + patch_workbook
+  messages: [
+    { role: 'user', content: 'Create a sales dashboard with monthly revenue data for Q1.' }
+  ],
+})
+```
+
+```ts
+import { toOpenAITools } from 'nextsheet/agent'
+import OpenAI from 'openai'
+
+const openai = new OpenAI()
+
+const completion = await openai.chat.completions.create({
+  model: 'gpt-4o',
+  tools: toOpenAITools(),
+  messages: [{ role: 'user', content: 'Add a Forecast column to the Revenue sheet.' }],
+})
+```
+
+The two built-in tools are:
+
+| Tool | Input | Description |
+|---|---|---|
+| `create_workbook` | `WorkbookNode` JSON | Create a full workbook in one shot |
+| `patch_workbook` | `{ patches: PatchOperation[] }` | Apply an ordered list of edits |
+
+### JSON Schemas
+
+All schemas are exported for use in your own tool definitions or JSON Schema validators:
+
+```ts
+import {
+  workbookSchema, sheetSchema, columnSchema, rowSchema, cellSchema,
+  patchSchema,
+  addRowSchema, updateCellSchema, removeRowSchema,
+  addColumnSchema, removeColumnSchema, updateColumnSchema,
+  setHeaderSchema,
+  addSheetSchema, removeSheetSchema, renameSheetSchema,
+  addChartSchema,
+} from 'nextsheet/agent'
 ```
 
 ---
@@ -276,124 +460,6 @@ export default function Dashboard() {
   { x: 25, y: 3.8, r: 10 },
   { x: 50, y: 4.7, r: 6 },
 ]} />
-```
-
----
-
-### One example per type
-
-```tsx
-{/* Bar — grouped vertical bars */}
-<Chart type="bar" title="Sales by Quarter" xAxis="Quarter">
-  <ChartSeries name="2024" column="Sales2024" color="#3b82f6" />
-  <ChartSeries name="2025" column="Sales2025" color="#22c55e" />
-</Chart>
-
-{/* Horizontal bar — useful for category rankings */}
-<Chart type="horizontal-bar" title="Revenue by Region" xAxis="Region">
-  <ChartSeries name="Revenue" column="Revenue" />
-</Chart>
-
-{/* Line — trend over time */}
-<Chart type="line" title="Monthly Active Users">
-  <ChartSeries name="MAU" data={[1_200, 1_800, 2_400, 3_100, 3_900]} />
-</Chart>
-
-{/* Area — same as line but filled */}
-<Chart type="area" title="Cumulative Revenue" xAxis="Month">
-  <ChartSeries name="Revenue" column="Revenue" color="#6366f1" />
-</Chart>
-
-{/* Stacked bar — composition of parts */}
-<Chart type="stacked-bar" title="Cost Breakdown" xAxis="Month">
-  <ChartSeries name="Engineering" column="Engineering" color="#3b82f6" />
-  <ChartSeries name="Marketing"   column="Marketing"   color="#f97316" />
-  <ChartSeries name="Operations"  column="Operations"  color="#a855f7" />
-</Chart>
-
-{/* Stacked area — share over time */}
-<Chart type="stacked-area" title="Traffic by Channel" xAxis="Week">
-  <ChartSeries name="Organic"  column="Organic"  color="#22c55e" />
-  <ChartSeries name="Paid"     column="Paid"     color="#3b82f6" />
-  <ChartSeries name="Referral" column="Referral" color="#f97316" />
-</Chart>
-
-{/* Pie — part-of-whole */}
-<Chart type="pie" title="Market Share" xAxis="Company">
-  <ChartSeries name="Share" column="Share" />
-</Chart>
-
-{/* Donut — same as pie with hollow center */}
-<Chart type="donut" title="Budget Allocation" xAxis="Category">
-  <ChartSeries name="Allocation" column="Budget" />
-</Chart>
-
-{/* Scatter — two-variable correlation */}
-<Chart type="scatter" title="Price vs Rating">
-  <ChartSeries name="Products" points={[
-    { x: 10, y: 4.2 }, { x: 25, y: 3.8 },
-    { x: 50, y: 4.7 }, { x: 80, y: 4.1 },
-  ]} />
-</Chart>
-
-{/* Bubble — three-variable comparison (r = bubble radius) */}
-<Chart type="bubble" title="Revenue / Margin / Volume">
-  <ChartSeries name="Products" points={[
-    { x: 20, y: 30, r: 5  },
-    { x: 40, y: 55, r: 12 },
-    { x: 60, y: 40, r: 8  },
-    { x: 80, y: 70, r: 16 },
-  ]} />
-</Chart>
-
-{/* Radar — multi-axis comparison */}
-<Chart type="radar" title="Skill Assessment">
-  <ChartSeries name="Alice" data={[85, 92, 78, 95, 80]} color="#3b82f6" />
-  <ChartSeries name="Bob"   data={[70, 85, 90, 75, 88]} color="#ef4444" />
-</Chart>
-```
-
-### Multiple charts in one sheet
-
-A sheet can have any number of charts. Each renders below the data table in the dev preview:
-
-```tsx
-<Sheet name="Sales Dashboard">
-  <Column name="Month"   type="string" />
-  <Column name="Revenue" type="currency" />
-  <Column name="Units"   type="number" />
-
-  <Section>{/* rows … */}</Section>
-
-  <Chart type="bar" title="Monthly Revenue" xAxis="Month">
-    <ChartSeries name="Revenue" column="Revenue" color="#22c55e" />
-  </Chart>
-
-  <Chart type="line" title="Units Sold" xAxis="Month" showLegend={false}>
-    <ChartSeries name="Units" column="Units" color="#3b82f6" />
-  </Chart>
-</Sheet>
-```
-
-### Accessing charts in a custom adapter
-
-```ts
-import type { Adapter, WorkbookNode, RenderResult } from 'nextsheet'
-
-export const myAdapter: Adapter = {
-  name: 'my-adapter',
-  async render(workbook: WorkbookNode): Promise<RenderResult> {
-    for (const sheet of workbook.sheets) {
-      for (const chart of sheet.charts) {
-        console.log(chart.type, chart.title)
-        for (const series of chart.series) {
-          console.log(series.name, series.column, series.data)
-        }
-      }
-    }
-    return { mimeType: 'text/plain', extension: 'txt', data: '' }
-  },
-}
 ```
 
 ---
