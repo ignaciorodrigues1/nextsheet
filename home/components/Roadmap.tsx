@@ -17,7 +17,7 @@ export default async function Roadmap() {
     <section id="roadmap">
       <div className="container">
         <div className="section-head">
-          <div className="kicker"><span className="n">07</span> {t('kicker').replace('07 ', '')}</div>
+          <div className="kicker"><span className="n">08</span> {t('kicker').replace('07 ', '')}</div>
           <div>
             <h2>{t('h2')}</h2>
             <p>{t('p')}</p>

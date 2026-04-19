@@ -4,6 +4,7 @@ import Thesis from '@/components/Thesis'
 import GettingStarted from '@/components/GettingStarted'
 import HowItWorks from '@/components/HowItWorks'
 import Backends from '@/components/Backends'
+import AgentSection from '@/components/AgentSection'
 import Charts from '@/components/Charts'
 import Deploy from '@/components/Deploy'
 import Roadmap from '@/components/Roadmap'
@@ -19,6 +20,7 @@ export default function Home() {
       <GettingStarted />
       <HowItWorks />
       <Backends />
+      <AgentSection />
       <Charts />
       <Deploy />
       <Roadmap />

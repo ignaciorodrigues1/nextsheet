@@ -6,7 +6,7 @@ export default async function Deploy() {
     <section id="deploy">
       <div className="container">
         <div className="section-head">
-          <div className="kicker"><span className="n">06</span> {t('kicker').replace('06 ', '')}</div>
+          <div className="kicker"><span className="n">07</span> {t('kicker').replace('06 ', '')}</div>
           <div>
             <h2>{t('h2')}</h2>
             <p dangerouslySetInnerHTML={{ __html: t.raw('p') as string }} />

@@ -6,7 +6,7 @@ export default async function Charts() {
     <section id="charts">
       <div className="container">
         <div className="section-head">
-          <div className="kicker"><span className="n">05</span> {t('kicker').replace('05 ', '')}</div>
+          <div className="kicker"><span className="n">06</span> {t('kicker').replace('05 ', '')}</div>
           <div>
             <h2>{t('h2')}</h2>
             <p dangerouslySetInnerHTML={{ __html: t.raw('p') as string }} />

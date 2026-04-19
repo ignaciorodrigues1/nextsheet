@@ -11,7 +11,7 @@ export default defineConfig({
       muted:      '#64748b',
     },
     typography: {
-      fontFamily:     'Inter',
+      fontFamily:     'JetBrains Mono',
       fontSize:       12,
       headerFontSize: 20,
     },
