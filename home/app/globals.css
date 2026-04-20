@@ -134,7 +134,8 @@ h1.display .green{color:var(--accent)}
 .pane{position:absolute;inset:0;opacity:0;transition:opacity .6s ease;pointer-events:none}
 .pane.is-on{opacity:1;pointer-events:auto}
 .pane-sheet{overflow:auto}
-.term{background:#050505;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;color:var(--fg-2);overflow:hidden;position:relative;min-height:420px}
+.term{background:#050505;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;color:var(--fg-2);overflow-y:scroll;position:relative;height:460px;scrollbar-width:none}
+.term::-webkit-scrollbar{display:none}
 .term-inner{padding:16px 18px;white-space:pre;min-height:100%}
 .term .t-dim{color:var(--fg-3)}
 .term .t-dim2{color:var(--fg-4)}

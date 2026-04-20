@@ -97,7 +97,11 @@ export default function Hero() {
 
     function tick() {
       const f = frames[idx]
-      if (out) out.innerHTML = f.html
+      if (out) {
+        out.innerHTML = f.html
+        const container = out.parentElement
+        if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+      }
 
       const pc = paneCodeRef.current
       const ps = paneSheetRef.current
